@@ -55,7 +55,15 @@ export default function Settings() {
                   </button>
                 </form>
               )}
-              {tab === 'integrations' && <GscIntegration />}
+              {tab === 'integrations' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+                  <GscIntegration />
+                  <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
+                  <LinkedInIntegration />
+                  <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
+                  <GoogleAdsIntegration />
+                </div>
+              )}
               {tab === 'backups' && <BackupSettings />}
             </div>
           </div>
@@ -291,6 +299,218 @@ function GscIntegration() {
           <button type="button" className="btn btn-primary" onClick={startConnect}>
             Connect Google Search Console
           </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LinkedInIntegration() {
+  const [status, setStatus] = useState(null);
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  const load = async () => {
+    const [r1, r2] = await Promise.all([
+      fetch('/api/settings/integrations/linkedin/credentials'),
+      fetch('/api/settings/integrations/linkedin/status'),
+    ]);
+    if (r1.ok) setStatus({ ...(await r1.json()), ...(r2.ok ? await r2.json() : {}) });
+  };
+  useEffect(() => {
+    load();
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('li_connected')) setMsg('LinkedIn account connected!');
+      if (p.get('li_error')) setErr(decodeURIComponent(p.get('li_error')));
+    }
+  }, []);
+
+  const saveCredentials = async (e) => {
+    e.preventDefault();
+    setSaving(true); setMsg(''); setErr('');
+    const r = await fetch('/api/settings/integrations/linkedin/credentials', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, clientSecret }),
+    });
+    setSaving(false);
+    if (r.ok) { setMsg('LinkedIn credentials saved.'); setClientId(''); setClientSecret(''); load(); }
+    else { const d = await r.json().catch(() => ({})); setErr(d.error || 'Failed'); }
+  };
+
+  const connect = async () => {
+    setErr('');
+    const r = await fetch('/api/settings/integrations/linkedin/connect');
+    const d = await r.json();
+    if (!r.ok) { setErr(d.error); return; }
+    window.location.href = d.url;
+  };
+
+  const disconnect = async () => {
+    if (!confirm('Disconnect LinkedIn account? All linked sites will stop syncing.')) return;
+    await fetch('/api/settings/integrations/linkedin/disconnect', { method: 'POST' });
+    load();
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        <h3 style={{ margin: 0, fontSize: 16 }}>LinkedIn Organic</h3>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+          Track organic impressions, engagement, clicks, and CTR from your LinkedIn Company Pages.
+          Create a LinkedIn app at <a href="https://www.linkedin.com/developers/apps" target="_blank" rel="noreferrer">LinkedIn Developer Portal</a> with scopes <code>r_organization_social</code> and <code>r_ads_reporting</code>.
+        </p>
+      </div>
+      {msg && <div style={{ background: 'var(--success-light)', color: 'var(--success)', padding: '10px 14px', borderRadius: 'var(--radius)', fontSize: 13 }}>{msg}</div>}
+      {err && <div className="auth-error">{err}</div>}
+      {status?.configured && (
+        <div style={{ fontSize: 13, padding: 10, background: 'var(--success-light)', borderRadius: 8, color: 'var(--success)' }}>
+          ✓ App credentials saved · Client ID: {status.clientIdMasked}
+        </div>
+      )}
+      <form onSubmit={saveCredentials} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          Step 1 — LinkedIn App Credentials
+        </div>
+        <div className="form-group">
+          <label>Client ID</label>
+          <input type="text" value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="86xxxxxxxx" />
+        </div>
+        <div className="form-group">
+          <label>Client Secret</label>
+          <input type="password" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} placeholder="xxxxxxxxxxxxxxxx" />
+        </div>
+        <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} disabled={saving || !clientId || !clientSecret}>
+          {saving ? 'Saving…' : status?.configured ? 'Update Credentials' : 'Save Credentials'}
+        </button>
+      </form>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+          Step 2 — Connect your LinkedIn account
+        </div>
+        {!status?.configured && <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>Save credentials first.</p>}
+        {status?.configured && status?.connected && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 13 }}>
+            <span style={{ color: 'var(--success)', fontWeight: 600 }}>✓ Connected</span>
+            {status.linkedinName && <span style={{ color: 'var(--text-muted)' }}>{status.linkedinName}</span>}
+            <button type="button" className="btn btn-secondary btn-sm" style={{ marginLeft: 'auto' }} onClick={disconnect}>Disconnect</button>
+          </div>
+        )}
+        {status?.configured && !status?.connected && (
+          <button type="button" className="btn btn-primary" onClick={connect}>Connect LinkedIn Account</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GoogleAdsIntegration() {
+  const [status, setStatus] = useState(null);
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  const [developerToken, setDeveloperToken] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  const load = async () => {
+    const [r1, r2] = await Promise.all([
+      fetch('/api/settings/integrations/google-ads/credentials'),
+      fetch('/api/settings/integrations/google-ads/status'),
+    ]);
+    if (r1.ok) setStatus({ ...(await r1.json()), ...(r2.ok ? await r2.json() : {}) });
+  };
+  useEffect(() => {
+    load();
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('gads_connected')) setMsg('Google Ads account connected!');
+      if (p.get('gads_error')) setErr(decodeURIComponent(p.get('gads_error')));
+    }
+  }, []);
+
+  const saveCredentials = async (e) => {
+    e.preventDefault();
+    setSaving(true); setMsg(''); setErr('');
+    const body = {};
+    if (clientId && clientSecret) { body.clientId = clientId; body.clientSecret = clientSecret; }
+    if (developerToken) body.developerToken = developerToken;
+    const r = await fetch('/api/settings/integrations/google-ads/credentials', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    setSaving(false);
+    if (r.ok) { setMsg('Google Ads credentials saved.'); setClientId(''); setClientSecret(''); setDeveloperToken(''); load(); }
+    else { const d = await r.json().catch(() => ({})); setErr(d.error || 'Failed'); }
+  };
+
+  const connect = async () => {
+    setErr('');
+    const r = await fetch('/api/settings/integrations/google-ads/connect');
+    const d = await r.json();
+    if (!r.ok) { setErr(d.error); return; }
+    window.location.href = d.url;
+  };
+
+  const disconnect = async () => {
+    if (!confirm('Disconnect Google Ads account? All linked sites will stop syncing.')) return;
+    await fetch('/api/settings/integrations/google-ads/disconnect', { method: 'POST' });
+    load();
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        <h3 style={{ margin: 0, fontSize: 16 }}>Google Ads</h3>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+          Track ad performance: impressions, clicks, CTR, conversions, CVR, and spend.
+          You need a <a href="https://developers.google.com/google-ads/api/docs/first-call/dev-token" target="_blank" rel="noreferrer">Google Ads Developer Token</a> plus OAuth credentials (same Google Cloud project, add the <code>Google Ads API</code> and scope <code>adwords</code>).
+        </p>
+      </div>
+      {msg && <div style={{ background: 'var(--success-light)', color: 'var(--success)', padding: '10px 14px', borderRadius: 'var(--radius)', fontSize: 13 }}>{msg}</div>}
+      {err && <div className="auth-error">{err}</div>}
+      {status?.configured && (
+        <div style={{ fontSize: 13, padding: 10, background: 'var(--success-light)', borderRadius: 8, color: 'var(--success)' }}>
+          ✓ OAuth credentials saved · {status.developerTokenSet ? '✓ Developer token set' : '⚠ Developer token missing'}
+        </div>
+      )}
+      <form onSubmit={saveCredentials} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          Credentials
+        </div>
+        <div className="form-group">
+          <label>Client ID (Google Cloud)</label>
+          <input type="text" value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="123456789-abc.apps.googleusercontent.com" />
+        </div>
+        <div className="form-group">
+          <label>Client Secret</label>
+          <input type="password" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} placeholder="GOCSPX-..." />
+        </div>
+        <div className="form-group">
+          <label>Developer Token</label>
+          <input type="password" value={developerToken} onChange={(e) => setDeveloperToken(e.target.value)} placeholder="xxxxxxxxxxxxxxxx" />
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Found in Google Ads → Tools → API Center</span>
+        </div>
+        <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} disabled={saving || (!clientId && !developerToken)}>
+          {saving ? 'Saving…' : 'Save Credentials'}
+        </button>
+      </form>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+          Connect your Google Ads account
+        </div>
+        {!status?.configured && <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>Save OAuth credentials and developer token first.</p>}
+        {status?.configured && status?.connected && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 13 }}>
+            <span style={{ color: 'var(--success)', fontWeight: 600 }}>✓ Connected</span>
+            {status.googleEmail && <span style={{ color: 'var(--text-muted)' }}>{status.googleEmail}</span>}
+            <button type="button" className="btn btn-secondary btn-sm" style={{ marginLeft: 'auto' }} onClick={disconnect}>Disconnect</button>
+          </div>
+        )}
+        {status?.configured && !status?.connected && (
+          <button type="button" className="btn btn-primary" onClick={connect}>Connect Google Ads Account</button>
         )}
       </div>
     </div>

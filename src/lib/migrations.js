@@ -345,6 +345,112 @@ const migrations = [
       CREATE UNIQUE INDEX idx_sites_public_slug ON sites(public_slug);
     `);
   },
+
+  // Migration 12: Apollo, LinkedIn Organic, Google Ads integrations
+  (db) => {
+    db.exec(`
+      -- Apollo: site-level API key connection
+      CREATE TABLE apollo_connections (
+        site_id   INTEGER PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,
+        api_key   TEXT NOT NULL,
+        connected_at TEXT DEFAULT (datetime('now')),
+        last_sync_at TEXT,
+        last_error   TEXT
+      );
+
+      -- Apollo: daily email stats per site
+      CREATE TABLE apollo_daily (
+        site_id      INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+        date         TEXT NOT NULL,
+        sent         INTEGER DEFAULT 0,
+        delivered    INTEGER DEFAULT 0,
+        opens        INTEGER DEFAULT 0,
+        open_rate    REAL DEFAULT 0,
+        clicks       INTEGER DEFAULT 0,
+        click_rate   REAL DEFAULT 0,
+        replies      INTEGER DEFAULT 0,
+        bounces      INTEGER DEFAULT 0,
+        unsubscribes INTEGER DEFAULT 0,
+        PRIMARY KEY (site_id, date)
+      );
+      CREATE INDEX idx_apollo_daily_site_date ON apollo_daily(site_id, date);
+
+      -- LinkedIn: user-level OAuth connection
+      CREATE TABLE linkedin_connections (
+        user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        refresh_token TEXT NOT NULL,
+        linkedin_name TEXT,
+        connected_at  TEXT DEFAULT (datetime('now'))
+      );
+
+      -- LinkedIn: site linked to a company page (org URN)
+      CREATE TABLE linkedin_site_links (
+        site_id      INTEGER PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,
+        org_urn      TEXT NOT NULL,
+        org_name     TEXT,
+        status       TEXT DEFAULT 'active',
+        linked_at    TEXT DEFAULT (datetime('now')),
+        last_sync_at TEXT,
+        last_error   TEXT
+      );
+
+      -- LinkedIn: daily organic stats per site
+      CREATE TABLE linkedin_daily (
+        site_id     INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+        date        TEXT NOT NULL,
+        impressions INTEGER DEFAULT 0,
+        clicks      INTEGER DEFAULT 0,
+        likes       INTEGER DEFAULT 0,
+        comments    INTEGER DEFAULT 0,
+        shares      INTEGER DEFAULT 0,
+        ctr         REAL DEFAULT 0,
+        page_views  INTEGER DEFAULT 0,
+        PRIMARY KEY (site_id, date)
+      );
+      CREATE INDEX idx_linkedin_daily_site_date ON linkedin_daily(site_id, date);
+
+      -- Google Ads: user-level OAuth connection
+      CREATE TABLE google_ads_connections (
+        user_id         INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        refresh_token   TEXT NOT NULL,
+        google_email    TEXT,
+        connected_at    TEXT DEFAULT (datetime('now'))
+      );
+
+      -- Google Ads: site linked to an Ads customer account
+      CREATE TABLE google_ads_site_links (
+        site_id      INTEGER PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,
+        customer_id  TEXT NOT NULL,
+        account_name TEXT,
+        status       TEXT DEFAULT 'active',
+        linked_at    TEXT DEFAULT (datetime('now')),
+        last_sync_at TEXT,
+        last_error   TEXT
+      );
+
+      -- Google Ads: per-site settings (developer token, manager customer id)
+      CREATE TABLE google_ads_settings (
+        key   TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+
+      -- Google Ads: daily campaign stats per site
+      CREATE TABLE google_ads_daily (
+        site_id         INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+        date            TEXT NOT NULL,
+        impressions     INTEGER DEFAULT 0,
+        clicks          INTEGER DEFAULT 0,
+        ctr             REAL DEFAULT 0,
+        conversions     REAL DEFAULT 0,
+        conversion_rate REAL DEFAULT 0,
+        cost_micros     INTEGER DEFAULT 0,
+        page_views      INTEGER DEFAULT 0,
+        PRIMARY KEY (site_id, date)
+      );
+      CREATE INDEX idx_google_ads_daily_site_date ON google_ads_daily(site_id, date);
+    `);
+  },
 ];
 
 export function runMigrations(db) {

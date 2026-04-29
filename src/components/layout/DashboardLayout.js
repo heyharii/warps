@@ -62,6 +62,31 @@ export default function DashboardLayout({ children, siteId, siteName, siteDomain
                     Search Console
                   </Link>
                   <Link
+                    href={`/analytics/${siteId}/linkedin`}
+                    className={`app-nav-link ${path.includes('/linkedin') ? 'active' : ''}`}
+                  >
+                    LinkedIn
+                  </Link>
+                  <Link
+                    href={`/analytics/${siteId}/google-ads`}
+                    className={`app-nav-link ${path.includes('/google-ads') ? 'active' : ''}`}
+                  >
+                    Google Ads
+                  </Link>
+                  <Link
+                    href={`/analytics/${siteId}/apollo`}
+                    className={`app-nav-link ${path.includes('/apollo') ? 'active' : ''}`}
+                  >
+                    Apollo Email
+                  </Link>
+                  <Link
+                    href={`/analytics/${siteId}/blended`}
+                    className={`app-nav-link ${path.includes('/blended') ? 'active' : ''}`}
+                    style={{ fontWeight: path.includes('/blended') ? 700 : 600, color: path.includes('/blended') ? 'var(--accent)' : undefined }}
+                  >
+                    ⚡ Blended
+                  </Link>
+                  <Link
                     href={`/analytics/${siteId}/settings`}
                     className={`app-nav-link ${path.includes('/settings') && path.includes('/analytics/') ? 'active' : ''}`}
                   >
