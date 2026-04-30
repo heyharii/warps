@@ -141,7 +141,7 @@ export async function listGoogleAdsAccounts({ accessToken, developerToken }) {
   console.log(`[Google Ads] Response body: ${responseText.slice(0, 500)}`);
 
   if (!res.ok) throw new Error(`List accounts failed: ${res.status} ${responseText}`);
-  const data = await res.json();
+  const data = JSON.parse(responseText);
   const resourceNames = data.resourceNames || [];
   // Fetch basic info for each
   const accounts = await Promise.all(
