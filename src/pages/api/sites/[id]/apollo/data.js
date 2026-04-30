@@ -25,9 +25,15 @@ export default withAuth(async function handler(req, res) {
   const conn = getApolloConnection(siteId);
   if (!conn) return res.status(200).json({ connected: false });
 
-  // Trigger a sync if stale (> 6h)
-  if (!conn.last_sync_at || Date.now() - new Date(conn.last_sync_at + 'Z').getTime() > 6 * 60 * 60 * 1000) {
-    await syncApolloSite(siteId, { backfill: !conn.last_sync_at }).catch(() => {});
+  // Trigger a sync if stale (> 1h for Apollo since email activity changes frequently)
+  const ONE_HOUR = 60 * 60 * 1000;
+  if (!conn.last_sync_at || Date.now() - new Date(conn.last_sync_at + 'Z').getTime() > ONE_HOUR) {
+    try {
+      await syncApolloSite(siteId, { backfill: !conn.last_sync_at });
+    } catch (err) {
+      console.error(`[Apollo Sync] Failed for site ${siteId}:`, err.message);
+      // Don't fail the request — return cached data
+    }
   }
 
   const { startDate, endDate } = dateRange(period);

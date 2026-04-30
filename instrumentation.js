@@ -42,6 +42,24 @@ export async function register() {
     setTimeout(runGscSync, 15000);
     setInterval(runGscSync, GSC_INTERVAL);
 
+    // ── Apollo Email sync (runs every hour) ──
+    const APOLLO_INTERVAL = 60 * 60 * 1000; // 1 hour
+    const runApolloSync = async () => {
+      try {
+        const { syncAllApollo } = await import('./src/lib/apollo-sync.js');
+        const result = await syncAllApollo();
+        if (result.synced > 0) {
+          console.log(`[Apollo Sync] Synced ${result.synced} site(s)`);
+        }
+      } catch (err) {
+        if (!err.message?.includes('no such table')) {
+          console.error('[Apollo Sync] Error:', err.message);
+        }
+      }
+    };
+    setTimeout(runApolloSync, 20000);
+    setInterval(runApolloSync, APOLLO_INTERVAL);
+
     // ── Scheduled database backup ──
     const BACKUP_CHECK_INTERVAL = 60 * 60 * 1000; // check every hour
     const runScheduledBackup = async () => {
