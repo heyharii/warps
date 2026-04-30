@@ -33,7 +33,7 @@ rm -rf "$TEMP_BUILD_DIR" "$BACKUP_BUILD_DIR"
 
 # Step 3: Set Next.js to build to temp directory and run build
 echo -e "\n${YELLOW}[3/5] Building to temporary directory...${NC}"
-NEXT_BUILD_DIR=".next-temp" yarn build
+NEXT_BUILD_DIR=".next-temp" npm run build
 
 if [ ! -d "$TEMP_BUILD_DIR" ]; then
     echo -e "${RED}Build failed - temp directory not created${NC}"
