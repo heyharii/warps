@@ -104,6 +104,14 @@ export default function handler(req, res) {
           duration = CAST((julianday('now') - julianday(started_at)) * 86400 AS INTEGER)
         WHERE id = ?`
       ).run(data.pathname, data.session_id);
+
+      // Update daily_stats: this session is no longer a bounce
+      const today = new Date().toISOString().slice(0, 10);
+      db.prepare(
+        `UPDATE daily_stats SET
+          bounces = MAX(bounces - 1, 0)
+         WHERE site_id = ? AND date = ? AND bounces > 0`
+      ).run(data.site_id, today);
     }
 
     // Affiliate tracking

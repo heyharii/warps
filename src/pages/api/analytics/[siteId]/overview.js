@@ -149,6 +149,24 @@ export default withAuth(function handler(req, res) {
       )
       .get(siteId, range.from, range.to);
 
+    // Fallback: if daily_stats has sessions but zero bounces/duration,
+    // the aggregate cron hasn't run — compute from raw sessions
+    if (current.total_sessions > 0 && current.total_bounces === 0 && current.avg_duration === 0) {
+      const realtime = db
+        .prepare(
+          `SELECT
+            COUNT(DISTINCT visitor_id) as total_visitors,
+            COUNT(*) as total_sessions,
+            COALESCE(SUM(is_bounce), 0) as total_bounces,
+            COALESCE(AVG(duration), 0) as avg_duration
+           FROM sessions
+           WHERE site_id = ? AND date(started_at) BETWEEN ? AND ?`
+        )
+        .get(siteId, range.from, range.to);
+      current.total_bounces = realtime.total_bounces;
+      current.avg_duration = realtime.avg_duration;
+    }
+
     previous = db
       .prepare(
         `SELECT
@@ -161,6 +179,22 @@ export default withAuth(function handler(req, res) {
          WHERE site_id = ? AND date BETWEEN ? AND ?`
       )
       .get(siteId, prevRange.from, prevRange.to);
+
+    if (previous.total_sessions > 0 && previous.total_bounces === 0 && previous.avg_duration === 0) {
+      const realtime = db
+        .prepare(
+          `SELECT
+            COUNT(DISTINCT visitor_id) as total_visitors,
+            COUNT(*) as total_sessions,
+            COALESCE(SUM(is_bounce), 0) as total_bounces,
+            COALESCE(AVG(duration), 0) as avg_duration
+           FROM sessions
+           WHERE site_id = ? AND date(started_at) BETWEEN ? AND ?`
+        )
+        .get(siteId, prevRange.from, prevRange.to);
+      previous.total_bounces = realtime.total_bounces;
+      previous.avg_duration = realtime.avg_duration;
+    }
   }
 
   const bounceRate =

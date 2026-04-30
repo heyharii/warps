@@ -60,6 +60,27 @@ export async function register() {
     setTimeout(runApolloSync, 20000);
     setInterval(runApolloSync, APOLLO_INTERVAL);
 
+    // ── Daily stats aggregation (runs every hour to keep bounce rate & session time current) ──
+    const AGGREGATE_INTERVAL = 60 * 60 * 1000; // 1 hour
+    const runAggregate = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/api/cron/aggregate', {
+          method: 'POST',
+          headers: { 'x-cron-secret': process.env.CRON_SECRET || '' },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          console.log(`[Aggregate] Updated ${data.updated} daily_stats rows`);
+        }
+      } catch (err) {
+        if (!err.message?.includes('no such table')) {
+          console.error('[Aggregate] Error:', err.message);
+        }
+      }
+    };
+    setTimeout(runAggregate, 25000);
+    setInterval(runAggregate, AGGREGATE_INTERVAL);
+
     // ── Scheduled database backup ──
     const BACKUP_CHECK_INTERVAL = 60 * 60 * 1000; // check every hour
     const runScheduledBackup = async () => {
