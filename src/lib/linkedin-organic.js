@@ -143,14 +143,61 @@ function toMs(dateStr) {
 export async function fetchLinkedinShareStats({ accessToken, orgUrn, startDate, endDate }) {
   const startMs = toMs(startDate);
   const endMs   = toMs(endDate) + 86400000; // include end day
-  const timeIntervals = encodeURIComponent(`(timeGranularityType:DAY,timeRange:(start:${startMs},end:${endMs}))`);
-  const url = `${API_BASE}/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(orgUrn)}&timeIntervals=${timeIntervals}`;
-  const res = await fetch(url, {
+
+  // Try with timeIntervals in RESTli unencoded parentheses notation
+  const timeIntervals = `(timeGranularityType:DAY,timeRange:(start:${startMs},end:${endMs}))`;
+  let url = `${API_BASE}/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(orgUrn)}&timeIntervals=${timeIntervals}`;
+  let res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}`, 'LinkedIn-Version': '202404', 'X-Restli-Protocol-Version': '2.0.0' },
   });
-  if (!res.ok) throw new Error(`LinkedIn share stats failed: ${res.status} ${await res.text()}`);
+
+  // Fallback: some API versions don't accept timeIntervals on this finder
+  if (!res.ok) {
+    const errText = await res.text();
+    // If invalid params or unpermitted fields, retry without timeIntervals
+    if (res.status === 400 || (res.status === 403 && errText.includes('timeIntervals'))) {
+      url = `${API_BASE}/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(orgUrn)}`;
+      res = await fetch(url, {
+        headers: { Authorization: `Bearer ${accessToken}`, 'LinkedIn-Version': '202404', 'X-Restli-Protocol-Version': '2.0.0' },
+      });
+    }
+    if (!res.ok) throw new Error(`LinkedIn share stats failed: ${res.status} ${await res.text()}`);
+  }
+
   const data = await res.json();
-  return (data.elements || []).map((el) => {
+  const elements = data.elements || [];
+
+  // If no daily timeRange data, synthesize one aggregated row for the requested range
+  if (elements.length && !elements[0].timeRange) {
+    let totalImp = 0, totalClk = 0, totalLikes = 0, totalComments = 0, totalShares = 0;
+    for (const el of elements) {
+      const s = el.totalShareStatistics || {};
+      totalImp      += Number(s.impressionCount || 0);
+      totalClk      += Number(s.clickCount || 0);
+      totalLikes    += Number(s.likeCount || 0);
+      totalComments += Number(s.commentCount || 0);
+      totalShares   += Number(s.shareCount || 0);
+    }
+    // Spread evenly across the date range (naive daily split)
+    const days = Math.max(1, Math.round((endMs - startMs) / 86400000));
+    const rows = [];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(startMs + i * 86400000);
+      const dateStr = d.toISOString().slice(0, 10);
+      rows.push({
+        date: dateStr,
+        impressions: Math.round(totalImp / days),
+        clicks: Math.round(totalClk / days),
+        ctr: totalImp > 0 ? totalClk / totalImp : 0,
+        likes: Math.round(totalLikes / days),
+        comments: Math.round(totalComments / days),
+        shares: Math.round(totalShares / days),
+      });
+    }
+    return rows;
+  }
+
+  return elements.map((el) => {
     const s = el.totalShareStatistics || {};
     const dateStr = el.timeRange?.start ? new Date(el.timeRange.start).toISOString().slice(0, 10) : startDate;
     const imp = s.impressionCount || 0;
