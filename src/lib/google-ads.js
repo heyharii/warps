@@ -4,7 +4,7 @@ import { encrypt, decrypt } from './crypto';
 const TOKEN_URL  = 'https://oauth2.googleapis.com/token';
 const AUTH_URL   = 'https://accounts.google.com/o/oauth2/v2/auth';
 const SCOPE      = 'https://www.googleapis.com/auth/adwords https://www.googleapis.com/auth/userinfo.email';
-const ADS_BASE   = 'https://googleads.googleapis.com/v19';
+const ADS_BASE   = 'https://googleads.googleapis.com/v23';
 
 // ───── App credentials ─────
 
