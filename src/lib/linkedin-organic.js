@@ -143,7 +143,8 @@ function toMs(dateStr) {
 export async function fetchLinkedinShareStats({ accessToken, orgUrn, startDate, endDate }) {
   const startMs = toMs(startDate);
   const endMs   = toMs(endDate) + 86400000; // include end day
-  const url = `${API_BASE}/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(orgUrn)}&timeIntervals.timeGranularityType=DAY&timeIntervals.timeRange.start=${startMs}&timeIntervals.timeRange.end=${endMs}`;
+  const timeIntervals = encodeURIComponent(`(timeGranularityType:DAY,timeRange:(start:${startMs},end:${endMs}))`);
+  const url = `${API_BASE}/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(orgUrn)}&timeIntervals=${timeIntervals}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}`, 'LinkedIn-Version': '202404', 'X-Restli-Protocol-Version': '2.0.0' },
   });
@@ -173,7 +174,8 @@ export async function fetchLinkedinPageViews({ accessToken, orgUrn, startDate, e
   const startMs = toMs(startDate);
   const endMs   = toMs(endDate) + 86400000;
   const orgId = orgUrn.split(':').pop();
-  const url = `${API_BASE}/organizationPageStatistics?q=organization&organization=urn:li:organization:${orgId}&timeIntervals.timeGranularityType=DAY&timeIntervals.timeRange.start=${startMs}&timeIntervals.timeRange.end=${endMs}`;
+  const timeIntervals = encodeURIComponent(`(timeGranularityType:DAY,timeRange:(start:${startMs},end:${endMs}))`);
+  const url = `${API_BASE}/organizationPageStatistics?q=organization&organization=urn:li:organization:${orgId}&timeIntervals=${timeIntervals}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}`, 'LinkedIn-Version': '202404', 'X-Restli-Protocol-Version': '2.0.0' },
   });
