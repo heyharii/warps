@@ -5,7 +5,7 @@ const AUTH_URL   = 'https://www.linkedin.com/oauth/v2/authorization';
 const TOKEN_URL  = 'https://www.linkedin.com/oauth/v2/accessToken';
 const API_BASE   = 'https://api.linkedin.com/v2';
 // Scopes for reading company page organic stats
-const SCOPES     = 'r_organization_social r_ads_reporting openid profile email';
+const SCOPES     = 'r_organization_social r_organization_admin r_ads_reporting openid profile email';
 
 // ───── App credentials (stored encrypted in app_settings) ─────
 
