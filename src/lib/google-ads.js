@@ -123,13 +123,24 @@ export async function fetchGoogleAdsUserEmail(accessToken) {
 
 export async function listGoogleAdsAccounts({ accessToken, developerToken }) {
   // List accessible customers for this login credential
-  const res = await fetch(`${ADS_BASE}/customers:listAccessibleCustomers`, {
+  const url = `${ADS_BASE}/customers:listAccessibleCustomers`;
+  console.log(`[Google Ads] Calling: ${url}`);
+  console.log(`[Google Ads] Access token prefix: ${accessToken?.slice(0, 10)}...`);
+  console.log(`[Google Ads] Developer token prefix: ${developerToken?.slice(0, 5)}...`);
+
+  const res = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'developer-token': developerToken,
+      'Content-Type': 'application/json',
     },
   });
-  if (!res.ok) throw new Error(`List accounts failed: ${res.status} ${await res.text()}`);
+
+  const responseText = await res.text();
+  console.log(`[Google Ads] Response status: ${res.status}`);
+  console.log(`[Google Ads] Response body: ${responseText.slice(0, 500)}`);
+
+  if (!res.ok) throw new Error(`List accounts failed: ${res.status} ${responseText}`);
   const data = await res.json();
   const resourceNames = data.resourceNames || [];
   // Fetch basic info for each
