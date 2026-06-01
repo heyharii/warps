@@ -102,6 +102,36 @@
     // Realtime widget
     --realtime-bg: #1b1b1c;
     --realtime-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+
+    // ── bklit chart tokens (dark) ──
+    // Series palette
+    --chart-1: #6366f1;
+    --chart-2: #22c55e;
+    --chart-3: #f59e0b;
+    --chart-4: #e1306c;
+    --chart-5: #0ea5e9;
+    // Surfaces / tracks
+    --chart-background: rgba(255, 255, 255, 0.07);
+    --chart-ring-background: rgba(255, 255, 255, 0.08);
+    --chart-segment-background: rgba(255, 255, 255, 0.05);
+    --chart-segment-line: var(--border);
+    // Foreground / labels (--chart-grid already defined above)
+    --chart-foreground: #f5f5f6;
+    --chart-foreground-muted: #8b8b96;
+    --chart-label: #8b8b96;
+    --chart-crosshair: rgba(255, 255, 255, 0.25);
+    // Lines
+    --chart-line-primary: #6366f1;
+    --chart-line-secondary: #22c55e;
+    // Crosshair indicators
+    --chart-indicator-color: #6366f1;
+    --chart-indicator-secondary-color: #22c55e;
+    // Series point markers
+    --chart-marker-background: #1b1b1c;
+    --chart-marker-foreground: #f5f5f6;
+    --chart-marker-border: #282829;
+    --chart-marker-badge-background: #6366f1;
+    --chart-marker-badge-foreground: #ffffff;
 }
 
 [data-theme='light'] {
@@ -193,6 +223,30 @@
     // Realtime widget
     --realtime-bg: #ffffff;
     --realtime-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+
+    // ── bklit chart tokens (light) ──
+    --chart-1: #6366f1;
+    --chart-2: #16a34a;
+    --chart-3: #d97706;
+    --chart-4: #db2777;
+    --chart-5: #0284c7;
+    --chart-background: rgba(0, 0, 0, 0.06);
+    --chart-ring-background: rgba(0, 0, 0, 0.07);
+    --chart-segment-background: rgba(0, 0, 0, 0.04);
+    --chart-segment-line: var(--border);
+    --chart-foreground: #18181b;
+    --chart-foreground-muted: #71717a;
+    --chart-label: #71717a;
+    --chart-crosshair: rgba(0, 0, 0, 0.2);
+    --chart-line-primary: #6366f1;
+    --chart-line-secondary: #16a34a;
+    --chart-indicator-color: #6366f1;
+    --chart-indicator-secondary-color: #16a34a;
+    --chart-marker-background: #ffffff;
+    --chart-marker-foreground: #18181b;
+    --chart-marker-border: #e4e4e7;
+    --chart-marker-badge-background: #6366f1;
+    --chart-marker-badge-foreground: #ffffff;
 }
 
 *,
@@ -453,6 +507,210 @@ a {
     margin: 0 auto;
     padding: 24px 28px;
     width: 100%;
+}
+
+// ── Sidebar layout (new) ──
+.app-shell {
+    min-height: 100vh;
+    display: flex;
+}
+
+.app-sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 12px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.sidebar-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-heading);
+    letter-spacing: -0.3px;
+    padding: 4px 8px 16px;
+    &:hover {
+        color: var(--text-heading);
+    }
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex: 1;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    padding: 7px 10px;
+    border-radius: 6px;
+    transition: background 0.12s, color 0.12s;
+    background: transparent;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    width: 100%;
+    box-sizing: border-box;
+
+    &:hover {
+        color: var(--text);
+        background: var(--bg-surface);
+    }
+    &.active {
+        color: var(--text);
+        background: var(--bg-surface);
+        font-weight: 600;
+    }
+}
+
+.sidebar-group-toggle {
+    user-select: none;
+}
+
+.sidebar-subnav {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding-left: 12px;
+    margin: 2px 0 4px;
+    border-left: 1px solid var(--border);
+    margin-left: 14px;
+}
+
+.sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 4px;
+}
+
+.sidebar-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+.sidebar-icon-btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.12s, background 0.12s;
+    &:hover {
+        color: var(--text);
+        background: var(--bg-surface);
+    }
+}
+
+.app-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 28px;
+    height: 56px;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+}
+
+.topbar-site {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.topbar-favicon {
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.topbar-site-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-heading);
+    line-height: 1.2;
+}
+
+.topbar-site-domain {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.sidebar-toggle {
+    display: none;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar-backdrop {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .app-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 240px;
+        z-index: 200;
+        transform: translateX(-100%);
+        transition: transform 0.2s ease;
+        &.open {
+            transform: translateX(0);
+        }
+    }
+    .sidebar-toggle {
+        display: inline-flex;
+    }
+    .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 150;
+    }
 }
 
 // ── Page Header (site info + date picker) ──

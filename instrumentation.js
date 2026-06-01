@@ -114,5 +114,41 @@ export async function register() {
     };
     setTimeout(runScheduledBackup, 30000);
     setInterval(runScheduledBackup, BACKUP_CHECK_INTERVAL);
+
+    // ── Instagram sync (runs every hour, internally throttled to once/12h per site) ──
+    const IG_INTERVAL = 60 * 60 * 1000;
+    const runInstagramSync = async () => {
+      try {
+        const { syncAllInstagram } = await import('./src/lib/instagram-sync.js');
+        const result = await syncAllInstagram();
+        if (result.synced > 0) {
+          console.log(`[Instagram Sync] Synced ${result.synced} site(s)`);
+        }
+      } catch (err) {
+        if (!err.message?.includes('no such table')) {
+          console.error('[Instagram Sync] Error:', err.message);
+        }
+      }
+    };
+    setTimeout(runInstagramSync, 35000);
+    setInterval(runInstagramSync, IG_INTERVAL);
+
+    // ── TikTok sync (runs every hour, internally throttled to once/12h per site) ──
+    const TT_INTERVAL = 60 * 60 * 1000;
+    const runTiktokSync = async () => {
+      try {
+        const { syncAllTiktok } = await import('./src/lib/tiktok-sync.js');
+        const result = await syncAllTiktok();
+        if (result.synced > 0) {
+          console.log(`[TikTok Sync] Synced ${result.synced} site(s)`);
+        }
+      } catch (err) {
+        if (!err.message?.includes('no such table')) {
+          console.error('[TikTok Sync] Error:', err.message);
+        }
+      }
+    };
+    setTimeout(runTiktokSync, 40000);
+    setInterval(runTiktokSync, TT_INTERVAL);
   }
 }

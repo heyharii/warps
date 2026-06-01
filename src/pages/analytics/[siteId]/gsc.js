@@ -6,10 +6,13 @@ import {
   LuMousePointerClick, LuEye, LuPercent, LuArrowUpRight, LuArrowDownRight, LuExternalLink, LuUnlink,
   LuGlobe, LuMonitor, LuSmartphone, LuTablet, LuChevronRight,
 } from 'react-icons/lu';
+import dynamic from 'next/dynamic';
 import { getCountryName } from '@/lib/formatters';
 import CountryFlag from '@/components/ui/CountryFlag';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useDateRange } from '@/contexts/DateRangeContext';
+
+const BklitGauge = dynamic(() => import('@/components/charts/BklitGauge'), { ssr: false });
 
 export default function GscPage() {
   const router = useRouter();
@@ -196,6 +199,37 @@ function Dashboard({ data, onUnlink }) {
         <MetricCard icon={LuPercent} label="Avg. CTR" value={(avgCtr * 100).toFixed(1) + '%'} cur={avgCtr} prev={avgCtrPrev} days={data.days} />
         <MetricCard icon={LuTarget} label="Avg. Position" value={avgPos.toFixed(1)} cur={avgPos} prev={avgPosPrev} days={data.days} invert />
       </div>
+
+      {/* Search performance gauges — bklit gauge-chart */}
+      {(clicks > 0 || imps > 0) && (
+        <div className="panel" style={{ marginBottom: 20 }}>
+          <div className="panel-header" style={{ padding: '12px 18px' }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>Search Performance</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Avg. position fill = closer to #1 is fuller</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 8, padding: '4px 12px 12px', justifyItems: 'center' }}>
+            <div style={{ width: '100%', maxWidth: 280 }}>
+              <BklitGauge
+                value={Math.max(0, 100 - (avgPos - 1) * 5)}
+                centerValue={avgPos}
+                label="Avg Position"
+                format={{ maximumFractionDigits: 1 }}
+                activeGradient={['#bef264', '#22c55e']}
+              />
+            </div>
+            <div style={{ width: '100%', maxWidth: 280 }}>
+              <BklitGauge
+                value={avgCtr * 100}
+                centerValue={avgCtr * 100}
+                label="Avg CTR"
+                suffix="%"
+                format={{ maximumFractionDigits: 2 }}
+                activeGradient={['#a5b4fc', '#6366f1']}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Trend chart */}
       <GscChart data={data.timeSeries || []} days={data.days} />

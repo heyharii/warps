@@ -1,4 +1,5 @@
 import '@/styles/globals.scss';
+import '@/styles/tailwind.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { DateRangeProvider } from '@/contexts/DateRangeContext';
 import { FilterProvider } from '@/contexts/FilterContext';

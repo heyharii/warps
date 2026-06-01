@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import dynamic from 'next/dynamic';
 import { LuMail, LuMousePointerClick, LuEye, LuTrendingUp, LuCircleAlert, LuCircleCheck, LuX, LuRefreshCw } from 'react-icons/lu';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useDateRange } from '@/contexts/DateRangeContext';
+
+const BklitGauge = dynamic(() => import('@/components/charts/BklitGauge'), { ssr: false });
 
 function MetricCard({ icon, label, value, sub, color = 'var(--accent)' }) {
   return (
@@ -124,6 +127,23 @@ export default function ApolloPage() {
               <MetricCard icon={<LuCircleAlert size={14} />} label="Bounces" value={fmt(s.total_bounces)} color="var(--danger)" />
               <MetricCard icon={<LuX size={14} />} label="Unsubscribes" value={fmt(s.total_unsubscribes)} color="var(--text-muted)" />
             </div>
+
+            {/* Engagement gauges — bklit gauge-chart */}
+            {(s.avg_open_rate != null || s.avg_click_rate != null) && (
+              <div className="panel" style={{ marginBottom: 24 }}>
+                <div className="panel-header" style={{ padding: '12px 18px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>Engagement Rates</div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8, padding: '4px 12px 12px', justifyItems: 'center' }}>
+                  <div style={{ width: '100%', maxWidth: 300 }}>
+                    <BklitGauge value={(s.avg_open_rate || 0) * 100} centerValue={(s.avg_open_rate || 0) * 100} label="Open Rate" suffix="%" activeGradient={['#fcd34d', '#f59e0b']} />
+                  </div>
+                  <div style={{ width: '100%', maxWidth: 300 }}>
+                    <BklitGauge value={(s.avg_click_rate || 0) * 100} centerValue={(s.avg_click_rate || 0) * 100} label="Click Rate" suffix="%" activeGradient={['#c4b5fd', '#8b5cf6']} />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Time series chart */}
             {data.daily?.length > 0 && (

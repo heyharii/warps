@@ -131,8 +131,90 @@ export default withAuth(function handler(req, res) {
     return { ...conv, timeToComplete, journey };
   });
 
+  // ── Summary KPIs across the full date range (not just current page) ──
+  const summaryRow = db.prepare(
+    `SELECT
+       COUNT(*) AS total_conversions,
+       COALESCE(SUM(amount), 0) AS total_revenue,
+       COALESCE(AVG(amount), 0) AS avg_order_value
+     FROM conversions
+     WHERE site_id = ? AND status = 'completed'
+     AND datetime(created_at) BETWEEN ? AND ?`
+  ).get(siteId, range.from, dateEnd);
+
+  const refundRow = db.prepare(
+    `SELECT
+       COUNT(*) AS refunds,
+       COALESCE(SUM(amount), 0) AS refund_revenue
+     FROM conversions
+     WHERE site_id = ? AND status = 'refunded'
+     AND datetime(created_at) BETWEEN ? AND ?`
+  ).get(siteId, range.from, dateEnd);
+
+  const sessionsRow = db.prepare(
+    `SELECT COUNT(*) AS total_sessions
+     FROM sessions
+     WHERE site_id = ? AND datetime(started_at) BETWEEN ? AND ?`
+  ).get(siteId, range.from, dateEnd);
+
+  // Average time-to-complete: convertedAt - firstSession.startedAt for each converted visitor
+  const avgTimeRow = db.prepare(
+    `SELECT AVG(
+       (julianday(c.created_at) - julianday(
+         (SELECT MIN(s.started_at) FROM sessions s
+          WHERE s.site_id = c.site_id AND s.visitor_id = c.visitor_id)
+       )) * 86400
+     ) AS avg_seconds
+     FROM conversions c
+     WHERE c.site_id = ? AND c.status = 'completed'
+     AND c.visitor_id IS NOT NULL
+     AND datetime(c.created_at) BETWEEN ? AND ?`
+  ).get(siteId, range.from, dateEnd);
+
+  // Daily time-series of conversions and revenue
+  const daily = db.prepare(
+    `SELECT
+       date(created_at) AS date,
+       COUNT(*) AS conversions,
+       COALESCE(SUM(amount), 0) AS revenue
+     FROM conversions
+     WHERE site_id = ? AND status = 'completed'
+     AND datetime(created_at) BETWEEN ? AND ?
+     GROUP BY date(created_at)
+     ORDER BY date ASC`
+  ).all(siteId, range.from, dateEnd);
+
+  // Top sources by revenue
+  const topSources = db.prepare(
+    `SELECT
+       COALESCE(NULLIF(utm_source, ''), NULLIF(referrer_domain, ''), 'Direct') AS source,
+       COUNT(*) AS conversions,
+       COALESCE(SUM(amount), 0) AS revenue
+     FROM conversions
+     WHERE site_id = ? AND status = 'completed'
+     AND datetime(created_at) BETWEEN ? AND ?
+     GROUP BY source
+     ORDER BY revenue DESC
+     LIMIT 8`
+  ).all(siteId, range.from, dateEnd);
+
+  const totalConversions = summaryRow.total_conversions || 0;
+  const totalSessions = sessionsRow.total_sessions || 0;
+
   res.status(200).json({
     site: { id: site.id, name: site.name, domain: site.domain },
+    summary: {
+      totalConversions,
+      totalRevenue: summaryRow.total_revenue || 0,
+      avgOrderValue: summaryRow.avg_order_value || 0,
+      refunds: refundRow.refunds || 0,
+      refundRevenue: refundRow.refund_revenue || 0,
+      totalSessions,
+      conversionRate: totalSessions > 0 ? totalConversions / totalSessions : 0,
+      avgTimeToComplete: Math.round(avgTimeRow?.avg_seconds || 0),
+    },
+    daily,
+    topSources,
     conversions: enriched,
     pagination: {
       page: pageNum,

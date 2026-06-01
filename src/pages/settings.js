@@ -62,6 +62,10 @@ export default function Settings() {
                   <LinkedInIntegration />
                   <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
                   <GoogleAdsIntegration />
+                  <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
+                  <InstagramIntegration />
+                  <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
+                  <TiktokIntegration />
                 </div>
               )}
               {tab === 'backups' && <BackupSettings />}
@@ -511,6 +515,211 @@ function GoogleAdsIntegration() {
         )}
         {status?.configured && !status?.connected && (
           <button type="button" className="btn btn-primary" onClick={connect}>Connect Google Ads Account</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InstagramIntegration() {
+  const [status, setStatus] = useState(null);
+  const [appId, setAppId] = useState('');
+  const [appSecret, setAppSecret] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  const load = async () => {
+    const [r1, r2] = await Promise.all([
+      fetch('/api/settings/integrations/instagram/credentials'),
+      fetch('/api/settings/integrations/instagram/status'),
+    ]);
+    if (r1.ok) setStatus({ ...(await r1.json()), ...(r2.ok ? await r2.json() : {}) });
+  };
+  useEffect(() => {
+    load();
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('ig_connected')) setMsg('Instagram (Facebook) account connected!');
+      if (p.get('ig_error')) setErr(decodeURIComponent(p.get('ig_error')));
+    }
+  }, []);
+
+  const saveCredentials = async (e) => {
+    e.preventDefault();
+    setSaving(true); setMsg(''); setErr('');
+    const r = await fetch('/api/settings/integrations/instagram/credentials', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appId, appSecret }),
+    });
+    setSaving(false);
+    if (r.ok) { setMsg('Instagram credentials saved.'); setAppId(''); setAppSecret(''); load(); }
+    else { const d = await r.json().catch(() => ({})); setErr(d.error || 'Failed'); }
+  };
+
+  const connect = async () => {
+    setErr('');
+    const r = await fetch('/api/settings/integrations/instagram/connect');
+    const d = await r.json();
+    if (!r.ok) { setErr(d.error); return; }
+    window.location.href = d.url;
+  };
+
+  const disconnect = async () => {
+    if (!confirm('Disconnect Instagram account? All linked sites will stop syncing.')) return;
+    await fetch('/api/settings/integrations/instagram/disconnect', { method: 'POST' });
+    load();
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        <h3 style={{ margin: 0, fontSize: 16 }}>Instagram</h3>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+          Track reach, impressions, followers, and engagement from your Instagram Business accounts.
+          Requires a <a href="https://developers.facebook.com/apps/" target="_blank" rel="noreferrer">Facebook App</a> with <code>instagram_manage_insights</code> and <code>instagram_basic</code> permissions.
+          Your Instagram account must be a Business account linked to a Facebook Page.
+        </p>
+      </div>
+      {msg && <div style={{ background: 'var(--success-light)', color: 'var(--success)', padding: '10px 14px', borderRadius: 'var(--radius)', fontSize: 13 }}>{msg}</div>}
+      {err && <div className="auth-error">{err}</div>}
+      {status?.configured && (
+        <div style={{ fontSize: 13, padding: 10, background: 'var(--success-light)', borderRadius: 8, color: 'var(--success)' }}>
+          ✓ App credentials saved · App ID: {status.appIdMasked}
+        </div>
+      )}
+      <form onSubmit={saveCredentials} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          Step 1 — Facebook App Credentials
+        </div>
+        <div className="form-group">
+          <label>App ID</label>
+          <input type="text" value={appId} onChange={(e) => setAppId(e.target.value)} placeholder="123456789012345" />
+        </div>
+        <div className="form-group">
+          <label>App Secret</label>
+          <input type="password" value={appSecret} onChange={(e) => setAppSecret(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+        </div>
+        <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} disabled={saving || !appId || !appSecret}>
+          {saving ? 'Saving…' : status?.configured ? 'Update Credentials' : 'Save Credentials'}
+        </button>
+      </form>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+          Step 2 — Connect your Facebook account
+        </div>
+        {!status?.configured && <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>Save credentials first.</p>}
+        {status?.configured && status?.connected && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 13 }}>
+            <span style={{ color: 'var(--success)', fontWeight: 600 }}>✓ Connected</span>
+            {status.fbName && <span style={{ color: 'var(--text-muted)' }}>{status.fbName}</span>}
+            <button type="button" className="btn btn-secondary btn-sm" style={{ marginLeft: 'auto' }} onClick={disconnect}>Disconnect</button>
+          </div>
+        )}
+        {status?.configured && !status?.connected && (
+          <button type="button" className="btn btn-primary" onClick={connect}>Connect Facebook / Instagram Account</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TiktokIntegration() {
+  const [status, setStatus] = useState(null);
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  const load = async () => {
+    const [r1, r2] = await Promise.all([
+      fetch('/api/settings/integrations/tiktok/credentials'),
+      fetch('/api/settings/integrations/tiktok/status'),
+    ]);
+    if (r1.ok) setStatus({ ...(await r1.json()), ...(r2.ok ? await r2.json() : {}) });
+  };
+  useEffect(() => {
+    load();
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('tt_connected')) setMsg('TikTok account connected!');
+      if (p.get('tt_error')) setErr(decodeURIComponent(p.get('tt_error')));
+    }
+  }, []);
+
+  const saveCredentials = async (e) => {
+    e.preventDefault();
+    setSaving(true); setMsg(''); setErr('');
+    const r = await fetch('/api/settings/integrations/tiktok/credentials', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, clientSecret }),
+    });
+    setSaving(false);
+    if (r.ok) { setMsg('TikTok credentials saved.'); setClientId(''); setClientSecret(''); load(); }
+    else { const d = await r.json().catch(() => ({})); setErr(d.error || 'Failed'); }
+  };
+
+  const connect = async () => {
+    setErr('');
+    const r = await fetch('/api/settings/integrations/tiktok/connect');
+    const d = await r.json();
+    if (!r.ok) { setErr(d.error); return; }
+    window.location.href = d.url;
+  };
+
+  const disconnect = async () => {
+    if (!confirm('Disconnect TikTok account? All linked sites will stop syncing.')) return;
+    await fetch('/api/settings/integrations/tiktok/disconnect', { method: 'POST' });
+    load();
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        <h3 style={{ margin: 0, fontSize: 16 }}>TikTok</h3>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+          Track followers, video views, likes, comments, and shares from your TikTok account.
+          Register an app at <a href="https://developers.tiktok.com/" target="_blank" rel="noreferrer">TikTok for Developers</a> and enable scopes <code>user.info.stats</code> and <code>video.list</code>.
+        </p>
+      </div>
+      {msg && <div style={{ background: 'var(--success-light)', color: 'var(--success)', padding: '10px 14px', borderRadius: 'var(--radius)', fontSize: 13 }}>{msg}</div>}
+      {err && <div className="auth-error">{err}</div>}
+      {status?.configured && (
+        <div style={{ fontSize: 13, padding: 10, background: 'var(--success-light)', borderRadius: 8, color: 'var(--success)' }}>
+          ✓ App credentials saved · Client Key: {status.clientIdMasked}
+        </div>
+      )}
+      <form onSubmit={saveCredentials} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          Step 1 — TikTok App Credentials
+        </div>
+        <div className="form-group">
+          <label>Client Key</label>
+          <input type="text" value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxx" />
+        </div>
+        <div className="form-group">
+          <label>Client Secret</label>
+          <input type="password" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxxxx" />
+        </div>
+        <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} disabled={saving || !clientId || !clientSecret}>
+          {saving ? 'Saving…' : status?.configured ? 'Update Credentials' : 'Save Credentials'}
+        </button>
+      </form>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+          Step 2 — Connect your TikTok account
+        </div>
+        {!status?.configured && <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>Save credentials first.</p>}
+        {status?.configured && status?.connected && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 13 }}>
+            <span style={{ color: 'var(--success)', fontWeight: 600 }}>✓ Connected</span>
+            {status.tiktokName && <span style={{ color: 'var(--text-muted)' }}>{status.tiktokName}{status.tiktokUsername ? ` (@${status.tiktokUsername})` : ''}</span>}
+            <button type="button" className="btn btn-secondary btn-sm" style={{ marginLeft: 'auto' }} onClick={disconnect}>Disconnect</button>
+          </div>
+        )}
+        {status?.configured && !status?.connected && (
+          <button type="button" className="btn btn-primary" onClick={connect}>Connect TikTok Account</button>
         )}
       </div>
     </div>

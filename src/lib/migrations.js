@@ -451,6 +451,123 @@ const migrations = [
       CREATE INDEX idx_google_ads_daily_site_date ON google_ads_daily(site_id, date);
     `);
   },
+
+  // Migration 13: Instagram + TikTok analytics integrations
+  (db) => {
+    db.exec(`
+      -- Instagram: user-level OAuth connection (via Facebook/Meta)
+      CREATE TABLE instagram_connections (
+        user_id          INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        fb_user_id       TEXT,
+        fb_access_token  TEXT NOT NULL,
+        fb_name          TEXT,
+        token_expires_at TEXT,
+        connected_at     TEXT DEFAULT (datetime('now'))
+      );
+
+      -- Instagram: site linked to an Instagram Business Account
+      CREATE TABLE instagram_site_links (
+        site_id           INTEGER PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,
+        ig_user_id        TEXT NOT NULL,
+        ig_username       TEXT,
+        ig_name           TEXT,
+        page_id           TEXT NOT NULL,
+        page_access_token TEXT NOT NULL,
+        status            TEXT DEFAULT 'active',
+        linked_at         TEXT DEFAULT (datetime('now')),
+        last_sync_at      TEXT,
+        last_error        TEXT
+      );
+
+      -- Instagram: daily analytics per site
+      CREATE TABLE instagram_daily (
+        site_id     INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+        date        TEXT NOT NULL,
+        followers   INTEGER DEFAULT 0,
+        reach       INTEGER DEFAULT 0,
+        impressions INTEGER DEFAULT 0,
+        likes       INTEGER DEFAULT 0,
+        comments    INTEGER DEFAULT 0,
+        shares      INTEGER DEFAULT 0,
+        saves       INTEGER DEFAULT 0,
+        PRIMARY KEY (site_id, date)
+      );
+      CREATE INDEX idx_instagram_daily_site_date ON instagram_daily(site_id, date);
+
+      -- TikTok: user-level OAuth connection
+      CREATE TABLE tiktok_connections (
+        user_id          INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        open_id          TEXT NOT NULL,
+        access_token     TEXT NOT NULL,
+        refresh_token    TEXT NOT NULL,
+        token_expires_at TEXT,
+        tiktok_name      TEXT,
+        tiktok_username  TEXT,
+        connected_at     TEXT DEFAULT (datetime('now'))
+      );
+
+      -- TikTok: site linked to a TikTok account
+      CREATE TABLE tiktok_site_links (
+        site_id         INTEGER PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,
+        open_id         TEXT NOT NULL,
+        tiktok_username TEXT,
+        tiktok_name     TEXT,
+        status          TEXT DEFAULT 'active',
+        linked_at       TEXT DEFAULT (datetime('now')),
+        last_sync_at    TEXT,
+        last_error      TEXT
+      );
+
+      -- TikTok: daily analytics snapshot per site
+      CREATE TABLE tiktok_daily (
+        site_id          INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+        date             TEXT NOT NULL,
+        followers        INTEGER DEFAULT 0,
+        following        INTEGER DEFAULT 0,
+        total_likes      INTEGER DEFAULT 0,
+        video_count      INTEGER DEFAULT 0,
+        views            INTEGER DEFAULT 0,
+        video_likes      INTEGER DEFAULT 0,
+        video_comments   INTEGER DEFAULT 0,
+        video_shares     INTEGER DEFAULT 0,
+        PRIMARY KEY (site_id, date)
+      );
+      CREATE INDEX idx_tiktok_daily_site_date ON tiktok_daily(site_id, date);
+    `);
+  },
+
+  // Migration 14: GA4 (Google Analytics 4) integration
+  (db) => {
+    db.exec(`
+      -- GA4: per-site link to a GA4 property (one property per site, reuse user's gsc_connections OAuth)
+      CREATE TABLE ga4_site_links (
+        site_id        INTEGER PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,
+        property_id    TEXT NOT NULL,
+        property_name  TEXT,
+        account_name   TEXT,
+        status         TEXT DEFAULT 'active',
+        linked_at      TEXT DEFAULT (datetime('now')),
+        last_sync_at   TEXT,
+        last_error     TEXT
+      );
+
+      -- GA4: daily snapshot of headline metrics per site
+      CREATE TABLE ga4_daily (
+        site_id        INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+        date           TEXT NOT NULL,
+        sessions       INTEGER DEFAULT 0,
+        users          INTEGER DEFAULT 0,
+        new_users      INTEGER DEFAULT 0,
+        pageviews      INTEGER DEFAULT 0,
+        bounce_rate    REAL DEFAULT 0,
+        avg_duration   REAL DEFAULT 0,
+        conversions    INTEGER DEFAULT 0,
+        revenue        REAL DEFAULT 0,
+        PRIMARY KEY (site_id, date)
+      );
+      CREATE INDEX idx_ga4_daily_site_date ON ga4_daily(site_id, date);
+    `);
+  },
 ];
 
 export function runMigrations(db) {

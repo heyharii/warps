@@ -1,0 +1,43 @@
+/* Tailwind v4 — utilities ONLY for bklit chart components.
+ *
+ * Deliberately NO preflight/base layer: the app's existing SCSS design system
+ * (globals.scss) owns all element resets, typography and component styling.
+ * We only pull in Tailwind's theme tokens + utility classes so the bklit
+ * registry components (which use classes like `flex`, `aspect-[21/16]`,
+ * `bg-muted`, `text-foreground`) render correctly without touching the rest
+ * of the app.
+ */
+@layer theme, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+/* source(none) disables Tailwind's automatic project-wide scan; we then opt in
+ * to ONLY the bklit chart components below. The rest of the app uses SCSS +
+ * inline styles (no Tailwind classes), so nothing else needs scanning. */
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+@source "../components/charts";
+
+/* Map shadcn/bklit semantic color classes (bg-muted, text-foreground, …) to
+ * this app's existing design tokens (defined in globals.scss for both themes). */
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--bg-card);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--bg-card);
+  --color-popover-foreground: var(--text);
+  --color-muted: var(--bg-surface);
+  --color-muted-foreground: var(--text-muted);
+  --color-border: var(--border);
+  --color-primary: var(--accent);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  /* chart label + tooltip surfaces (classes used by bklit ring/gauge/tooltip) */
+  --color-chart-label: var(--chart-label);
+  --color-chart-tooltip-foreground: var(--chart-tooltip-text);
+  --color-chart-tooltip-muted: var(--chart-tooltip-label);
+  --color-chart-tooltip-background: var(--chart-tooltip-bg);
+}

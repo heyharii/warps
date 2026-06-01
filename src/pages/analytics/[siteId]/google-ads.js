@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import dynamic from 'next/dynamic';
 import { LuTarget, LuEye, LuMousePointerClick, LuTrendingUp, LuDollarSign, LuFileText, LuCircleCheck, LuCircleAlert, LuX, LuShoppingCart } from 'react-icons/lu';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, BarChart, Bar } from 'recharts';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useDateRange } from '@/contexts/DateRangeContext';
+
+const BklitGauge = dynamic(() => import('@/components/charts/BklitGauge'), { ssr: false });
+const BklitDailyScatter = dynamic(() => import('@/components/charts/BklitDailyScatter'), { ssr: false });
 
 function MetricCard({ icon, label, value, sub, color = 'var(--accent)' }) {
   return (
@@ -157,6 +161,36 @@ export default function GoogleAdsPage() {
               <MetricCard icon={<LuDollarSign size={14} />} label="Ad Spend" value={currency(s.total_cost_micros)} color="#f59e0b" />
               <MetricCard icon={<LuShoppingCart size={14} />} label="Add to Cart" value="— (Future)" color="var(--text-muted)" />
             </div>
+
+            {/* Efficiency gauges + daily conversions scatter — bklit */}
+            {(s.avg_ctr != null || s.avg_cvr != null) && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 16 }}>
+                <div className="panel">
+                  <div className="panel-header" style={{ padding: '12px 18px' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>Efficiency Rates</div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '4px 12px 12px', justifyItems: 'center' }}>
+                    <div style={{ width: '100%', maxWidth: 240 }}>
+                      <BklitGauge value={(s.avg_ctr || 0) * 100} centerValue={(s.avg_ctr || 0) * 100} label="CTR" suffix="%" format={{ maximumFractionDigits: 2 }} activeGradient={['#c4b5fd', '#8b5cf6']} />
+                    </div>
+                    <div style={{ width: '100%', maxWidth: 240 }}>
+                      <BklitGauge value={(s.avg_cvr || 0) * 100} centerValue={(s.avg_cvr || 0) * 100} label="CVR" suffix="%" format={{ maximumFractionDigits: 2 }} activeGradient={['#bef264', '#10b981']} />
+                    </div>
+                  </div>
+                </div>
+                {data.daily?.length > 1 && (
+                  <div className="panel">
+                    <div className="panel-header" style={{ padding: '12px 18px' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>Daily Conversions</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Each dot = a day · low→high coloured red→green</div>
+                    </div>
+                    <div style={{ padding: 16 }}>
+                      <BklitDailyScatter data={data.daily} dataKey="conversions" label="Conversions" aspectRatio="2 / 1" numFmt={(v) => Math.round(v).toLocaleString()} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Performance over time */}
             {data.daily?.length > 0 && (
