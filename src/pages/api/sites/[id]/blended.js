@@ -7,6 +7,7 @@ import { getInstagramUserConn, getInstagramSiteLink, getInstagramDailyRows, getI
 import { getTiktokUserConn, getTiktokSiteLink, getTiktokDailyRows, getTiktokSummary } from '@/lib/tiktok';
 import { getGa4SiteLink, getGa4AccessTokenForSite, runReport, rowsFromReport } from '@/lib/ga4';
 import { readGa4DailyCache, syncGa4Site } from '@/lib/ga4-sync';
+import { getWebsiteSupabase, getFormSubmissionCount } from '@/lib/website-supabase';
 
 function dateRange(period) {
   const now = new Date();
@@ -262,7 +263,7 @@ export default withAuth(async function handler(req, res) {
         },
       });
       // Live calls only for breakdowns we don't cache (per-source, per-path).
-      const [sourcesCurr, leadCurr, reportCurr, checkoutCurr, leadPrev, reportPrev, checkoutPrev] = await Promise.all([
+      const [sourcesCurr, leadCurr, reportCurr, checkoutCurr, leadPrev, reportPrev, checkoutPrev, engagedCurr, engagedPrev] = await Promise.all([
         runReport({ accessToken, propertyId, startDate, endDate,
           dimensions: ['sessionSource', 'sessionMedium', 'sessionDefaultChannelGroup'], metrics: ['sessions', 'bouncedSessions'], limit: 500 }),
         runReport({ accessToken, propertyId, startDate, endDate, metrics: ['screenPageViews'], dimensionFilter: pathFilter(FUNNEL_PATH_PATTERNS.leadForm) }),
@@ -271,6 +272,8 @@ export default withAuth(async function handler(req, res) {
         runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['screenPageViews'], dimensionFilter: pathFilter(FUNNEL_PATH_PATTERNS.leadForm) }),
         runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['screenPageViews'], dimensionFilter: pathFilter(FUNNEL_PATH_PATTERNS.reportPage) }),
         runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['screenPageViews'], dimensionFilter: pathFilter(FUNNEL_PATH_PATTERNS.checkout) }),
+        runReport({ accessToken, propertyId, startDate, endDate, metrics: ['engagedSessions'] }),
+        runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['engagedSessions'] }),
       ]);
 
       // Sum cached daily rows to get totals (saves 2 GA4 API calls).
@@ -290,6 +293,12 @@ export default withAuth(async function handler(req, res) {
       prevSiteTotals.total_sessions = pre.sessions;
       prevSiteTotals.total_bounces  = pre.bouncedSessions;
       prevSiteTotals.engaged_sessions = pre.engagedSessions;
+
+      // Prefer GA4's real engagedSessions metric over the sessions−bounces approximation.
+      const realEngagedCur = Math.round(rowsFromReport(engagedCurr)[0]?.engagedSessions || 0);
+      const realEngagedPre = Math.round(rowsFromReport(engagedPrev)[0]?.engagedSessions || 0);
+      if (realEngagedCur > 0) siteTotals.engaged_sessions = realEngagedCur;
+      if (realEngagedPre > 0) prevSiteTotals.engaged_sessions = realEngagedPre;
 
       // Daily GA4 sessions/users — read from cache
       const ga4DailyRows = cacheCurr.map((r) => ({
@@ -365,12 +374,35 @@ export default withAuth(async function handler(req, res) {
   }
   const purchaseConv     = convWithAnyPath(FUNNEL_PATH_PATTERNS.checkout, null, startDate, dateEnd);
   const formSubmittedRaw = convWithAnyPath(FUNNEL_PATH_PATTERNS.leadForm, FUNNEL_PATH_PATTERNS.checkout, startDate, dateEnd);
-  const formSubmittedReal = formSubmittedRaw.count;
+  let formSubmittedReal = formSubmittedRaw.count;
   const purchaseReal      = purchaseConv.count;
   const prevPurchaseConv     = convWithAnyPath(FUNNEL_PATH_PATTERNS.checkout, null, prevStartDate, prevDateEnd);
   const prevFormSubmittedRaw = convWithAnyPath(FUNNEL_PATH_PATTERNS.leadForm, FUNNEL_PATH_PATTERNS.checkout, prevStartDate, prevDateEnd);
-  const prevFormSubmitted = prevFormSubmittedRaw.count;
+  let prevFormSubmitted = prevFormSubmittedRaw.count;
   const prevPurchase      = prevPurchaseConv.count;
+
+  // If this site's leads live in the website's Supabase, use the REAL form-submission
+  // count for the funnel "Leads" stage instead of the page-view/conversion proxy.
+  // Gated by WEBSITE_SUPABASE_SITE_ID so other sites are unaffected.
+  if (getWebsiteSupabase() && String(siteId) === process.env.WEBSITE_SUPABASE_SITE_ID) {
+    try {
+      const [realLeads, prevRealLeads] = await Promise.all([
+        getFormSubmissionCount({ startDate, endDate }),
+        getFormSubmissionCount({ startDate: prevStartDate, endDate: prevEndDate }),
+      ]);
+      if (realLeads > 0) {
+        formSubmittedReal = realLeads;
+        // Ensure the lead branch renders (form views ≥ submissions) and stages read as real.
+        leadFormViewsReal = Math.max(leadFormViewsReal, realLeads);
+      }
+      if (prevRealLeads > 0) {
+        prevFormSubmitted = prevRealLeads;
+        prevLeadFormViews = Math.max(prevLeadFormViews, prevRealLeads);
+      }
+    } catch (err) {
+      console.error('[Blended leads from Supabase]', err.message);
+    }
+  }
 
   // ── Strict channel attribution by (utm_source, utm_medium, referrer, [GA4 channelGroup]) ──
   // First-match wins, so no double-counting. When GA4 is the source, channelGroup is

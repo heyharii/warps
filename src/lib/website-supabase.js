@@ -12,6 +12,18 @@ export function getWebsiteSupabase() {
   return _client;
 }
 
+// Real count of website form submissions in a date window (for the blended funnel "Leads" stage).
+export async function getFormSubmissionCount({ startDate, endDate } = {}) {
+  const sb = getWebsiteSupabase();
+  if (!sb) return 0;
+  let q = sb.from('website_form_submissions').select('*', { count: 'exact', head: true });
+  if (startDate) q = q.gte('created_at', startDate);
+  if (endDate) q = q.lte('created_at', `${endDate}T23:59:59`);
+  const { count, error } = await q;
+  if (error) throw new Error(error.message);
+  return count || 0;
+}
+
 const SELECT_COLS =
   'id,form_type,created_at,email_sent,email_opened,download_link_clicked,download_accessed,source,company,industry_interest,first_name,last_name,email,insight_title';
 
