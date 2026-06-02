@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useDateRange } from '@/contexts/DateRangeContext';
-import CombinedChart from '@/components/charts/CombinedChart';
 import CountryFlag from '@/components/ui/CountryFlag';
 import { getCountryName } from '@/lib/formatters';
 
-const WorldBubbleMap = dynamic(() => import('@/components/charts/WorldBubbleMap'), { ssr: false });
+const BklitChoropleth = dynamic(() => import('@/components/charts/BklitChoropleth'), { ssr: false });
+const CombinedChart = dynamic(() => import('@/components/charts/CombinedChart'), { ssr: false });
 const BklitGauge = dynamic(() => import('@/components/charts/BklitGauge'), { ssr: false });
 const BklitRing = dynamic(() => import('@/components/charts/BklitRing'), { ssr: false });
 
@@ -267,20 +267,20 @@ export default function Ga4Analytics({ siteId }) {
             <BreakdownPanel title="OS" rows={data.oses} keyField="os" />
           </div>
 
-          {/* ── World traffic map — bklit choropleth-chart style ── */}
+          {/* ── World traffic map — bklit choropleth-chart ── */}
           {data.countries?.length > 0 && (
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
               <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>Visitor Traffic by Country</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Bubble size = visitor volume · hover to inspect</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Shading = visitor volume · hover to inspect</div>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                   {data.countries.length} countries
                 </div>
               </div>
               <div style={{ padding: 12 }}>
-                <WorldBubbleMap countries={data.countries} accentColor="var(--accent, #6366f1)" />
+                <BklitChoropleth countries={data.countries} />
               </div>
             </div>
           )}

@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import dynamic from 'next/dynamic';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import MetricStrip from '@/components/ui/MetricStrip';
-import TimeSeriesChart from '@/components/charts/TimeSeriesChart';
 import { useDateRange } from '@/contexts/DateRangeContext';
+
+const TimeSeriesChart = dynamic(() => import('@/components/charts/TimeSeriesChart'), { ssr: false });
 
 export default function AffiliateDetail() {
   const router = useRouter();

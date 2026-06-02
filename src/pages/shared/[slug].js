@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import dynamic from 'next/dynamic';
 import MetricStrip from '@/components/ui/MetricStrip';
 import AnalyticsPanel from '@/components/ui/AnalyticsPanel';
-import CombinedChart from '@/components/charts/CombinedChart';
 import { getCountryName } from '@/lib/formatters';
 import CountryFlag from '@/components/ui/CountryFlag';
 import TechIcon from '@/components/ui/TechIcon';
 import ChannelIcon from '@/components/ui/ChannelIcon';
 import { useTheme } from '@/contexts/ThemeContext';
+
+const CombinedChart = dynamic(() => import('@/components/charts/CombinedChart'), { ssr: false });
 
 const periods = [
   { value: '24h', label: '1D' },

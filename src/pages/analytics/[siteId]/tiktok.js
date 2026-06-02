@@ -5,9 +5,11 @@ import {
   LuMusic, LuEye, LuHeart, LuMessageSquare, LuShare2,
   LuUsers, LuVideo, LuCircleCheck, LuCircleAlert, LuX,
 } from 'react-icons/lu';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Legend } from 'recharts';
+import dynamic from 'next/dynamic';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useDateRange } from '@/contexts/DateRangeContext';
+
+const BklitComposed = dynamic(() => import('@/components/charts/BklitComposed'), { ssr: false });
 
 function MetricCard({ icon, label, value, sub, color = 'var(--accent)' }) {
   return (
@@ -139,21 +141,15 @@ export default function TiktokPage() {
               <div className="panel" style={{ marginBottom: 16 }}>
                 <div className="panel-header"><div className="panel-tabs"><button className="panel-tab active">Followers & Views</button></div></div>
                 <div className="panel-body" style={{ padding: 20 }}>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <LineChart data={data.daily} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickFormatter={(d) => d.slice(5)} />
-                      <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                      <Tooltip
-                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                        formatter={(v, name) => [Number(v).toLocaleString(), name]}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Line type="monotone" dataKey="followers"   stroke={TT_COLOR2} dot={false} strokeWidth={2} name="Followers" />
-                      <Line type="monotone" dataKey="views"       stroke="#6366f1"   dot={false} strokeWidth={2} name="Video Views" />
-                      <Line type="monotone" dataKey="total_likes" stroke="#ef4444"   dot={false} strokeWidth={2} name="Total Likes" />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <BklitComposed
+                    data={data.daily}
+                    aspectRatio="2.6 / 1"
+                    series={[
+                      { key: 'followers', type: 'line', color: TT_COLOR2, label: 'Followers' },
+                      { key: 'views', type: 'line', color: '#6366f1', label: 'Video Views' },
+                      { key: 'total_likes', type: 'line', color: '#ef4444', label: 'Total Likes' },
+                    ]}
+                  />
                 </div>
               </div>
             )}
@@ -163,21 +159,16 @@ export default function TiktokPage() {
               <div className="panel">
                 <div className="panel-header"><div className="panel-tabs"><button className="panel-tab active">Video Engagement</button></div></div>
                 <div className="panel-body" style={{ padding: 20 }}>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={data.daily} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickFormatter={(d) => d.slice(5)} />
-                      <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                      <Tooltip
-                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                        formatter={(v, name) => [Number(v).toLocaleString(), name]}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="video_likes"    stackId="a" fill="#ef4444" name="Likes" />
-                      <Bar dataKey="video_comments" stackId="a" fill="#f59e0b" name="Comments" />
-                      <Bar dataKey="video_shares"   stackId="a" fill="#10b981" name="Shares" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <BklitComposed
+                    data={data.daily}
+                    stacked
+                    aspectRatio="3 / 1"
+                    series={[
+                      { key: 'video_likes', type: 'bar', color: '#ef4444', label: 'Likes' },
+                      { key: 'video_comments', type: 'bar', color: '#f59e0b', label: 'Comments' },
+                      { key: 'video_shares', type: 'bar', color: '#10b981', label: 'Shares' },
+                    ]}
+                  />
                 </div>
               </div>
             )}

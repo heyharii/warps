@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { AreaChart, Area, ResponsiveContainer, YAxis } from 'recharts';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import dynamic from 'next/dynamic';
@@ -10,7 +9,8 @@ import TechIcon from '@/components/ui/TechIcon';
 import VisitorAvatar from '@/components/ui/VisitorAvatar';
 import { getCountryName } from '@/lib/formatters';
 
-const VisitorMap = dynamic(() => import('@/components/ui/VisitorMap'), { ssr: false });
+const BklitChoropleth = dynamic(() => import('@/components/charts/BklitChoropleth'), { ssr: false });
+const BklitComposed = dynamic(() => import('@/components/charts/BklitComposed'), { ssr: false });
 
 export default function Sites() {
     const [sites, setSites] = useState([]);
@@ -177,21 +177,17 @@ export default function Sites() {
                                         </div>
                                         <div className="site-card-chart">
                                             {site.hourly.length > 0 ? (
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <AreaChart data={site.hourly} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-                                                        <YAxis domain={[0, 'dataMax']} hide />
-                                                        <Area
-                                                            type="monotone"
-                                                            dataKey="visitors"
-                                                            stroke="var(--accent)"
-                                                            fill="var(--accent)"
-                                                            fillOpacity={0.08}
-                                                            strokeWidth={1.5}
-                                                            dot={false}
-                                                            isAnimationActive={false}
-                                                        />
-                                                    </AreaChart>
-                                                </ResponsiveContainer>
+                                                <BklitComposed
+                                                    data={site.hourly}
+                                                    xKey="hour"
+                                                    aspectRatio="6 / 1"
+                                                    animate={false}
+                                                    showGrid={false}
+                                                    showXAxis={false}
+                                                    showYAxis={false}
+                                                    showTooltip={false}
+                                                    series={[{ key: 'visitors', type: 'area', color: 'var(--accent)', fillOpacity: 0.12, strokeWidth: 1.5 }]}
+                                                />
                                             ) : (
                                                 <span className="site-card-nodata">No data</span>
                                             )}
@@ -411,10 +407,13 @@ function OverviewDashboard({ onClose }) {
 
             {/* ── Right: Full Map ── */}
             <div style={{ position: 'relative', overflow: 'hidden' }}>
-                <VisitorMap
-                    countries={data.countries}
-                    activeUsers={data.activeUsers}
-                />
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                    <div style={{ width: '100%', maxWidth: 1100 }}>
+                        <BklitChoropleth
+                            countries={data.countries.map((c) => ({ countryId: c.name, country: getCountryName(c.name), visitors: c.count }))}
+                        />
+                    </div>
+                </div>
 
                 {/* ── Payments Widget (bottom-right, like realtime card) ── */}
                 <div style={{

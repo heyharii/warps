@@ -3,11 +3,11 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
 import { LuMail, LuMousePointerClick, LuEye, LuTrendingUp, LuCircleAlert, LuCircleCheck, LuX, LuRefreshCw } from 'react-icons/lu';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useDateRange } from '@/contexts/DateRangeContext';
 
 const BklitGauge = dynamic(() => import('@/components/charts/BklitGauge'), { ssr: false });
+const BklitComposed = dynamic(() => import('@/components/charts/BklitComposed'), { ssr: false });
 
 function MetricCard({ icon, label, value, sub, color = 'var(--accent)' }) {
   return (
@@ -150,22 +150,16 @@ export default function ApolloPage() {
               <div className="panel">
                 <div className="panel-header"><div className="panel-tabs"><button className="panel-tab active">Email Performance Over Time</button></div></div>
                 <div className="panel-body" style={{ padding: 20 }}>
-                  <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={data.daily} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickFormatter={(d) => d.slice(5)} />
-                      <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                      <Tooltip
-                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                        formatter={(v, name) => [Number(v).toLocaleString(), name]}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Line type="monotone" dataKey="sent" stroke="#6366f1" dot={false} strokeWidth={2} name="Sent" />
-                      <Line type="monotone" dataKey="opens" stroke="#f59e0b" dot={false} strokeWidth={2} name="Opens" />
-                      <Line type="monotone" dataKey="clicks" stroke="#8b5cf6" dot={false} strokeWidth={2} name="Clicks" />
-                      <Line type="monotone" dataKey="replies" stroke="#10b981" dot={false} strokeWidth={2} name="Replies" />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <BklitComposed
+                    data={data.daily}
+                    aspectRatio="2.6 / 1"
+                    series={[
+                      { key: 'sent', type: 'line', color: '#6366f1', label: 'Sent' },
+                      { key: 'opens', type: 'line', color: '#f59e0b', label: 'Opens' },
+                      { key: 'clicks', type: 'line', color: '#8b5cf6', label: 'Clicks' },
+                      { key: 'replies', type: 'line', color: '#10b981', label: 'Replies' },
+                    ]}
+                  />
                 </div>
               </div>
             )}
@@ -175,20 +169,15 @@ export default function ApolloPage() {
               <div className="panel" style={{ marginTop: 16 }}>
                 <div className="panel-header"><div className="panel-tabs"><button className="panel-tab active">Open Rate & CTR</button></div></div>
                 <div className="panel-body" style={{ padding: 20 }}>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={data.daily.map((d) => ({ ...d, open_rate_pct: +(d.open_rate * 100).toFixed(2), click_rate_pct: +(d.click_rate * 100).toFixed(2) }))} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickFormatter={(d) => d.slice(5)} />
-                      <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} unit="%" />
-                      <Tooltip
-                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                        formatter={(v) => [v + '%']}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Line type="monotone" dataKey="open_rate_pct" stroke="#f59e0b" dot={false} strokeWidth={2} name="Open Rate %" />
-                      <Line type="monotone" dataKey="click_rate_pct" stroke="#8b5cf6" dot={false} strokeWidth={2} name="CTR %" />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <BklitComposed
+                    data={data.daily.map((d) => ({ ...d, open_rate_pct: +(d.open_rate * 100).toFixed(2), click_rate_pct: +(d.click_rate * 100).toFixed(2) }))}
+                    aspectRatio="3 / 1"
+                    yFormat={(v) => v + '%'}
+                    series={[
+                      { key: 'open_rate_pct', type: 'line', color: '#f59e0b', label: 'Open Rate %', format: (v) => v + '%' },
+                      { key: 'click_rate_pct', type: 'line', color: '#8b5cf6', label: 'CTR %', format: (v) => v + '%' },
+                    ]}
+                  />
                 </div>
               </div>
             )}

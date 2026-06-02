@@ -3,12 +3,12 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
 import { LuTarget, LuEye, LuMousePointerClick, LuTrendingUp, LuDollarSign, LuFileText, LuCircleCheck, LuCircleAlert, LuX, LuShoppingCart } from 'react-icons/lu';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, BarChart, Bar } from 'recharts';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useDateRange } from '@/contexts/DateRangeContext';
 
 const BklitGauge = dynamic(() => import('@/components/charts/BklitGauge'), { ssr: false });
 const BklitDailyScatter = dynamic(() => import('@/components/charts/BklitDailyScatter'), { ssr: false });
+const BklitComposed = dynamic(() => import('@/components/charts/BklitComposed'), { ssr: false });
 
 function MetricCard({ icon, label, value, sub, color = 'var(--accent)' }) {
   return (
@@ -197,22 +197,23 @@ export default function GoogleAdsPage() {
               <div className="panel" style={{ marginBottom: 16 }}>
                 <div className="panel-header"><div className="panel-tabs"><button className="panel-tab active">Campaign Performance</button></div></div>
                 <div className="panel-body" style={{ padding: 20 }}>
-                  <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={data.daily} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickFormatter={(d) => d.slice(5)} />
-                      <YAxis yAxisId="left" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                      <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                      <Tooltip
-                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                        formatter={(v, name) => [Number(v).toLocaleString(), name]}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Line yAxisId="left" type="monotone" dataKey="impressions" stroke="#6366f1" dot={false} strokeWidth={2} name="Impressions" />
-                      <Line yAxisId="left" type="monotone" dataKey="clicks" stroke="#8b5cf6" dot={false} strokeWidth={2} name="Clicks" />
-                      <Line yAxisId="right" type="monotone" dataKey="conversions" stroke="#10b981" dot={false} strokeWidth={2} name="Conversions" />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Impressions & Clicks</div>
+                  <BklitComposed
+                    data={data.daily}
+                    aspectRatio="3 / 1"
+                    series={[
+                      { key: 'impressions', type: 'line', color: '#6366f1', label: 'Impressions' },
+                      { key: 'clicks', type: 'line', color: '#8b5cf6', label: 'Clicks' },
+                    ]}
+                  />
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', margin: '14px 0 4px' }}>Conversions</div>
+                  <BklitComposed
+                    data={data.daily}
+                    aspectRatio="4.5 / 1"
+                    series={[
+                      { key: 'conversions', type: 'line', color: '#10b981', label: 'Conversions' },
+                    ]}
+                  />
                 </div>
               </div>
             )}
@@ -222,17 +223,15 @@ export default function GoogleAdsPage() {
               <div className="panel" style={{ marginBottom: 16 }}>
                 <div className="panel-header"><div className="panel-tabs"><button className="panel-tab active">CTR & Conversion Rate</button></div></div>
                 <div className="panel-body" style={{ padding: 20 }}>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={data.daily.map((d) => ({ ...d, ctr_pct: +(d.ctr * 100).toFixed(3), cvr_pct: +(d.conversion_rate * 100).toFixed(3) }))} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickFormatter={(d) => d.slice(5)} />
-                      <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} unit="%" />
-                      <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} formatter={(v) => [v + '%']} />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Line type="monotone" dataKey="ctr_pct" stroke="#8b5cf6" dot={false} strokeWidth={2} name="CTR %" />
-                      <Line type="monotone" dataKey="cvr_pct" stroke="#10b981" dot={false} strokeWidth={2} name="CVR %" />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <BklitComposed
+                    data={data.daily.map((d) => ({ ...d, ctr_pct: +(d.ctr * 100).toFixed(3), cvr_pct: +(d.conversion_rate * 100).toFixed(3) }))}
+                    aspectRatio="3 / 1"
+                    yFormat={(v) => v + '%'}
+                    series={[
+                      { key: 'ctr_pct', type: 'line', color: '#8b5cf6', label: 'CTR %', format: (v) => v + '%' },
+                      { key: 'cvr_pct', type: 'line', color: '#10b981', label: 'CVR %', format: (v) => v + '%' },
+                    ]}
+                  />
                 </div>
               </div>
             )}
@@ -242,15 +241,14 @@ export default function GoogleAdsPage() {
               <div className="panel">
                 <div className="panel-header"><div className="panel-tabs"><button className="panel-tab active">Daily Ad Spend</button></div></div>
                 <div className="panel-body" style={{ padding: 20 }}>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <BarChart data={data.daily.map((d) => ({ ...d, spend: +(d.cost_micros / 1_000_000).toFixed(2) }))} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickFormatter={(d) => d.slice(5)} />
-                      <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} unit="$" />
-                      <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} formatter={(v) => ['$' + v, 'Spend']} />
-                      <Bar dataKey="spend" fill="#f59e0b" name="Spend ($)" radius={[3, 3, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <BklitComposed
+                    data={data.daily.map((d) => ({ ...d, spend: +(d.cost_micros / 1_000_000).toFixed(2) }))}
+                    aspectRatio="4 / 1"
+                    yFormat={(v) => '$' + v}
+                    series={[
+                      { key: 'spend', type: 'bar', color: '#f59e0b', label: 'Spend', format: (v) => '$' + v },
+                    ]}
+                  />
                 </div>
               </div>
             )}

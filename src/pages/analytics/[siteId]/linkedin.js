@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { LuLinkedin, LuEye, LuMousePointerClick, LuHeart, LuMessageSquare, LuShare2, LuFileText, LuCircleCheck, LuCircleAlert, LuX } from 'react-icons/lu';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Legend } from 'recharts';
+import dynamic from 'next/dynamic';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useDateRange } from '@/contexts/DateRangeContext';
+
+const BklitComposed = dynamic(() => import('@/components/charts/BklitComposed'), { ssr: false });
 
 function MetricCard({ icon, label, value, sub, color = 'var(--accent)' }) {
   return (
@@ -158,21 +160,14 @@ export default function LinkedInPage() {
               <div className="panel" style={{ marginBottom: 16 }}>
                 <div className="panel-header"><div className="panel-tabs"><button className="panel-tab active">Impressions & Clicks</button></div></div>
                 <div className="panel-body" style={{ padding: 20 }}>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <LineChart data={data.daily} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickFormatter={(d) => d.slice(5)} />
-                      <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                      <Tooltip
-                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                        formatter={(v, name) => [Number(v).toLocaleString(), name]}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Line type="monotone" dataKey="impressions" stroke="#6366f1" dot={false} strokeWidth={2} name="Impressions" />
-                      <Line type="monotone" dataKey="clicks" stroke="#8b5cf6" dot={false} strokeWidth={2} name="Clicks" />
-                      <Line type="monotone" dataKey="page_views" stroke="#06b6d4" dot={false} strokeWidth={2} name="Page Views" />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <BklitComposed
+                    data={data.daily}
+                    series={[
+                      { key: 'impressions', type: 'line', color: '#6366f1', label: 'Impressions' },
+                      { key: 'clicks', type: 'line', color: '#8b5cf6', label: 'Clicks' },
+                      { key: 'page_views', type: 'line', color: '#06b6d4', label: 'Page Views' },
+                    ]}
+                  />
                 </div>
               </div>
             )}
@@ -182,21 +177,16 @@ export default function LinkedInPage() {
               <div className="panel">
                 <div className="panel-header"><div className="panel-tabs"><button className="panel-tab active">Engagement Breakdown</button></div></div>
                 <div className="panel-body" style={{ padding: 20 }}>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={data.daily} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickFormatter={(d) => d.slice(5)} />
-                      <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                      <Tooltip
-                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                        formatter={(v, name) => [Number(v).toLocaleString(), name]}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="likes" stackId="a" fill="#ef4444" name="Likes" />
-                      <Bar dataKey="comments" stackId="a" fill="#f59e0b" name="Comments" />
-                      <Bar dataKey="shares" stackId="a" fill="#10b981" name="Shares" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <BklitComposed
+                    data={data.daily}
+                    stacked
+                    aspectRatio="3 / 1"
+                    series={[
+                      { key: 'likes', type: 'bar', color: '#ef4444', label: 'Likes' },
+                      { key: 'comments', type: 'bar', color: '#f59e0b', label: 'Comments' },
+                      { key: 'shares', type: 'bar', color: '#10b981', label: 'Shares' },
+                    ]}
+                  />
                 </div>
               </div>
             )}

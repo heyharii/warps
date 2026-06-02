@@ -4,13 +4,13 @@ import Head from 'next/head';
 import {
   LuDollarSign, LuShoppingCart, LuTrendingUp, LuPercent, LuClock, LuRotateCcw,
 } from 'react-icons/lu';
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
-} from 'recharts';
+import dynamic from 'next/dynamic';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import ConversionJourneyTable from '@/components/ui/ConversionJourneyTable';
 import FlowView from '@/components/ui/FlowView';
 import { useDateRange } from '@/contexts/DateRangeContext';
+
+const BklitComposed = dynamic(() => import('@/components/charts/BklitComposed'), { ssr: false });
 
 function fmt(n) {
   if (n == null || isNaN(n)) return '—';
@@ -156,27 +156,23 @@ export default function Conversions() {
               </div>
             </div>
             <div className="panel-body" style={{ padding: 20 }}>
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart
-                  data={daily.map(d => ({ ...d, revenue_dollars: +((d.revenue || 0) / 100).toFixed(2) }))}
-                  margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickFormatter={(d) => d.slice(5)} />
-                  <YAxis yAxisId="left" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                  <Tooltip
-                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                    formatter={(v, name) => {
-                      if (name === 'Revenue') return ['$' + Number(v).toLocaleString(), name];
-                      return [Number(v).toLocaleString(), name];
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line yAxisId="left" type="monotone" dataKey="conversions" stroke="#6366f1" dot={false} strokeWidth={2} name="Conversions" />
-                  <Line yAxisId="right" type="monotone" dataKey="revenue_dollars" stroke="#22c55e" dot={false} strokeWidth={2} name="Revenue" />
-                </LineChart>
-              </ResponsiveContainer>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Conversions</div>
+              <BklitComposed
+                data={daily}
+                aspectRatio="3.4 / 1"
+                series={[
+                  { key: 'conversions', type: 'line', color: '#6366f1', label: 'Conversions' },
+                ]}
+              />
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', margin: '14px 0 4px' }}>Revenue</div>
+              <BklitComposed
+                data={daily.map(d => ({ ...d, revenue_dollars: +((d.revenue || 0) / 100).toFixed(2) }))}
+                aspectRatio="3.4 / 1"
+                yFormat={(v) => '$' + v}
+                series={[
+                  { key: 'revenue_dollars', type: 'area', color: '#22c55e', label: 'Revenue', format: (v) => '$' + Number(v).toLocaleString() },
+                ]}
+              />
             </div>
           </div>
         )}

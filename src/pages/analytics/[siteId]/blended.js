@@ -7,10 +7,6 @@ import {
   LuTrendingUp, LuTrendingDown, LuDollarSign, LuCircleCheck, LuCircleAlert,
   LuMove, LuPalette, LuSquare, LuShuffle, LuSearch, LuMinus,
 } from 'react-icons/lu';
-import {
-  AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-} from 'recharts';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useDateRange } from '@/contexts/DateRangeContext';
 
@@ -19,6 +15,8 @@ const FunnelSankey = dynamic(() => import('@/components/charts/FunnelSankey'), {
 // bklit registry charts — visx/motion based, browser-only
 const BklitGauge = dynamic(() => import('@/components/charts/BklitGauge'), { ssr: false });
 const BklitRing  = dynamic(() => import('@/components/charts/BklitRing'),  { ssr: false });
+const BklitComposed = dynamic(() => import('@/components/charts/BklitComposed'), { ssr: false });
+const BklitRadar = dynamic(() => import('@/components/charts/BklitRadar'), { ssr: false });
 
 const COLORS = {
   apollo:    { primary: '#6366f1', secondary: '#a5b4fc' },
@@ -458,29 +456,12 @@ export default function BlendedFunnelPage() {
               </div>
             </div>
             <div className="panel-body" style={{ padding: '0 18px 18px' }}>
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={daily} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                  <defs>
-                    {reachSeries.map(s => (
-                      <linearGradient key={s.key} id={`ag-${s.key}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor={s.color} stopOpacity={0.6} />
-                        <stop offset="95%" stopColor={s.color} stopOpacity={0.04} />
-                      </linearGradient>
-                    ))}
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickFormatter={d => d.slice(5)} />
-                  <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                  <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                    formatter={(v, name) => [Number(v).toLocaleString(), name]} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  {reachSeries.map(s => (
-                    <Area key={s.key} type="monotone" dataKey={s.key} name={s.name}
-                      stackId="reach" stroke={s.color} fill={`url(#ag-${s.key})`} fillOpacity={1}
-                      strokeWidth={2} dot={false} />
-                  ))}
-                </AreaChart>
-              </ResponsiveContainer>
+              <BklitComposed
+                data={daily}
+                stacked
+                aspectRatio="3 / 1"
+                series={reachSeries.map(s => ({ key: s.key, type: 'bar', color: s.color, label: s.name }))}
+              />
             </div>
           </div>
         )}
@@ -768,22 +749,7 @@ export default function BlendedFunnelPage() {
                 <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Normalized 0–100 per dimension</div>
               </div>
               <div style={{ padding: '0 14px 14px' }}>
-                <ResponsiveContainer width="100%" height={260}>
-                  <RadarChart data={radarData}>
-                    <PolarGrid stroke="var(--border)" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                    <PolarRadiusAxis tick={{ fill: 'var(--text-muted)', fontSize: 9 }} domain={[0, 100]} tickCount={4} />
-                    {channels.map(c => (
-                      <Radar key={c.key} name={c.name} dataKey={c.key}
-                        stroke={c.color} fill={c.color} fillOpacity={0.12} strokeWidth={2} />
-                    ))}
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Tooltip
-                      contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                      formatter={(v, name) => [`${v}/100`, name]}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
+                <BklitRadar subjects={radarData} series={channels} />
               </div>
             </div>
           )}
@@ -863,31 +829,11 @@ export default function BlendedFunnelPage() {
               {(() => {
                 const activeCfg = chartConfig[chartTabs.find(t => t.key === activeChart) ? activeChart : chartTabs[0]?.key] || [];
                 return (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <AreaChart data={daily} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <defs>
-                        {activeCfg.map(cfg => (
-                          <linearGradient key={cfg.key} id={`tg-${cfg.key}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor={cfg.color} stopOpacity={0.35} />
-                            <stop offset="95%" stopColor={cfg.color} stopOpacity={0.01} />
-                          </linearGradient>
-                        ))}
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickFormatter={(d) => d.slice(5)} />
-                      <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                      <Tooltip
-                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                        formatter={(v, name) => [Number(v).toLocaleString(), name]}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      {activeCfg.map(cfg => (
-                        <Area key={cfg.key} type="monotone" dataKey={cfg.key} name={cfg.name}
-                          stroke={cfg.color} fill={`url(#tg-${cfg.key})`} fillOpacity={1}
-                          dot={false} strokeWidth={2} />
-                      ))}
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <BklitComposed
+                    data={daily}
+                    aspectRatio="2.8 / 1"
+                    series={activeCfg.map(cfg => ({ key: cfg.key, type: 'area', color: cfg.color, label: cfg.name }))}
+                  />
                 );
               })()}
             </div>

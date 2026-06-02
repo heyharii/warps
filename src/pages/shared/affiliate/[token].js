@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import TimeSeriesChart from '@/components/charts/TimeSeriesChart';
+import dynamic from 'next/dynamic';
+
+const TimeSeriesChart = dynamic(() => import('@/components/charts/TimeSeriesChart'), { ssr: false });
 
 const PERIODS = [
   { label: '7d', value: '7d' },
