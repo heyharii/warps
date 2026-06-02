@@ -87,9 +87,15 @@ export default function LeadsPage() {
         {!loading && data && !data.connected && (
           <div className="panel" style={{ marginBottom: 20 }}>
             <div className="panel-body" style={{ padding: 20 }}>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                Website Supabase isn’t configured. Set <strong>WEBSITE_SUPABASE_URL</strong> and <strong>WEBSITE_SUPABASE_ANON_KEY</strong> in the environment to pull form submissions.
-              </p>
+              {data.reason === 'not_website_site' ? (
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                  Form-submission leads are tracked on <strong>{data.websiteDomain}</strong>, not this site. Open that site to see its leads.
+                </p>
+              ) : (
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                  Website Supabase isn’t configured. Set <strong>WEBSITE_SUPABASE_URL</strong> and <strong>WEBSITE_SUPABASE_ANON_KEY</strong> in the environment to pull form submissions.
+                </p>
+              )}
             </div>
           </div>
         )}

@@ -3,11 +3,18 @@
 import { FunnelChart } from './funnel-chart';
 
 export default function BklitFunnel({ stages = [], orientation = 'horizontal' }) {
-  const data = (stages || [])
-    .filter((s) => s.value != null && s.value > 0)
-    .map((s) => ({ label: s.label, value: s.value, color: s.color }));
+  const filtered = (stages || []).filter((s) => s.value != null && s.value > 0);
+  if (filtered.length < 2) return null;
 
-  if (data.length < 2) return null;
+  // Clamp the *geometry* so a segment never widens past the previous one (a funnel
+  // can't grow), while keeping the real count in the label via displayValue. Guards
+  // against mixed data sources, e.g. Leads (Supabase) > Sessions (site tracking).
+  let prev = Number.POSITIVE_INFINITY;
+  const data = filtered.map((s) => {
+    const geom = Math.min(s.value, prev);
+    prev = geom;
+    return { label: s.label, value: geom, displayValue: Number(s.value).toLocaleString(), color: s.color };
+  });
 
   return (
     <FunnelChart

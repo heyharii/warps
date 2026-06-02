@@ -7,12 +7,7 @@ import { getInstagramUserConn, getInstagramSiteLink, getInstagramDailyRows, getI
 import { getTiktokUserConn, getTiktokSiteLink, getTiktokDailyRows, getTiktokSummary } from '@/lib/tiktok';
 import { getGa4SiteLink, getGa4AccessTokenForSite, runReport, rowsFromReport } from '@/lib/ga4';
 import { readGa4DailyCache, syncGa4Site } from '@/lib/ga4-sync';
-import { getWebsiteSupabase, getFormSubmissionCount, getPurchaseStats } from '@/lib/website-supabase';
-
-// Normalize a domain for comparison (strip protocol, www, trailing slash, lowercase).
-function normDomain(d) {
-  return (d || '').toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
-}
+import { getFormSubmissionCount, getPurchaseStats, isWebsiteSite } from '@/lib/website-supabase';
 
 function dateRange(period) {
   const now = new Date();
@@ -106,8 +101,7 @@ export default withAuth(async function handler(req, res) {
 
   // This site IS the marketing website when its domain matches WEBSITE_SUPABASE_SITE_DOMAIN
   // (e.g. theravenry.com) and the website Supabase is configured. Drives real leads/purchases.
-  const websiteDomain = normDomain(process.env.WEBSITE_SUPABASE_SITE_DOMAIN);
-  const isWebsiteSite = !!(websiteDomain && getWebsiteSupabase() && normDomain(site.domain) === websiteDomain);
+  const siteIsWebsite = isWebsiteSite(site.domain);
 
   const { startDate, endDate, prevStartDate, prevEndDate } = dateRange(period);
 
@@ -396,7 +390,7 @@ export default withAuth(async function handler(req, res) {
   // Leads from Supabase form submissions, Purchases + revenue from Stripe (orders table).
   let stripeRevenue = null;
   let prevStripeRevenue = null;
-  if (isWebsiteSite) {
+  if (siteIsWebsite) {
     try {
       const [realLeads, prevRealLeads, purch, prevPurch] = await Promise.all([
         getFormSubmissionCount({ startDate, endDate }),

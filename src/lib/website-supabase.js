@@ -12,6 +12,23 @@ export function getWebsiteSupabase() {
   return _client;
 }
 
+// Normalize a domain for comparison (strip protocol, www, trailing slash, lowercase).
+export function normDomain(d) {
+  return (d || '').toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
+}
+
+// Whether the website domain gate is configured at all.
+export function websiteDomainConfigured() {
+  return !!normDomain(process.env.WEBSITE_SUPABASE_SITE_DOMAIN);
+}
+
+// True when this site IS the marketing website (domain matches WEBSITE_SUPABASE_SITE_DOMAIN
+// and the website Supabase is configured). Drives the real leads/purchases overrides.
+export function isWebsiteSite(siteDomain) {
+  const configured = normDomain(process.env.WEBSITE_SUPABASE_SITE_DOMAIN);
+  return !!(configured && getWebsiteSupabase() && normDomain(siteDomain) === configured);
+}
+
 // Real Stripe purchases (paid orders) + revenue (cents) in a date window — for the funnel "Purchases" stage.
 export async function getPurchaseStats({ startDate, endDate } = {}) {
   const sb = getWebsiteSupabase();

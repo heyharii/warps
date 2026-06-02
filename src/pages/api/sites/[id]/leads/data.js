@@ -1,6 +1,6 @@
 import { withAuth } from '@/lib/withAuth';
 import { getDb } from '@/lib/db';
-import { getLeadsData, getWebsiteSupabase } from '@/lib/website-supabase';
+import { getLeadsData, getWebsiteSupabase, isWebsiteSite, websiteDomainConfigured } from '@/lib/website-supabase';
 
 function dateRange(period) {
   const now = new Date();
@@ -21,6 +21,11 @@ export default withAuth(async function handler(req, res) {
   if (!site) return res.status(404).json({ error: 'Site not found' });
 
   if (!getWebsiteSupabase()) return res.status(200).json({ connected: false });
+
+  // Leads are first-party to the marketing website — only surface them on that site.
+  if (websiteDomainConfigured() && !isWebsiteSite(site.domain)) {
+    return res.status(200).json({ connected: false, reason: 'not_website_site', websiteDomain: process.env.WEBSITE_SUPABASE_SITE_DOMAIN });
+  }
 
   const { startDate, endDate } = dateRange(period);
   try {
