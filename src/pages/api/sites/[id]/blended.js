@@ -252,9 +252,15 @@ export default withAuth(async function handler(req, res) {
       // Cold-start fallback: no cache row yet → trigger a one-off sync (blocking)
       // so the first request still gets data. Subsequent requests use the cache.
       if (cacheCurr.length === 0) {
-        await syncGa4Site(siteId, { backfill: true });
-        cacheCurr = readGa4DailyCache(siteId, startDate, endDate);
-        cachePrev = readGa4DailyCache(siteId, prevStartDate, prevEndDate);
+        // Best-effort: a sync failure must NOT abort the GA4 override — the live totals
+        // below still populate the KPIs even if the daily cache can't be written.
+        try {
+          await syncGa4Site(siteId, { backfill: true });
+          cacheCurr = readGa4DailyCache(siteId, startDate, endDate);
+          cachePrev = readGa4DailyCache(siteId, prevStartDate, prevEndDate);
+        } catch (e) {
+          console.error('[Blended GA4 sync]', e.message);
+        }
       }
 
       const accessToken = await getGa4AccessTokenForSite(siteId);
@@ -276,8 +282,8 @@ export default withAuth(async function handler(req, res) {
         runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['screenPageViews'], dimensionFilter: pathFilter(FUNNEL_PATH_PATTERNS.leadForm) }),
         runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['screenPageViews'], dimensionFilter: pathFilter(FUNNEL_PATH_PATTERNS.reportPage) }),
         runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['screenPageViews'], dimensionFilter: pathFilter(FUNNEL_PATH_PATTERNS.checkout) }),
-        runReport({ accessToken, propertyId, startDate, endDate, metrics: ['engagedSessions'] }),
-        runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['engagedSessions'] }),
+        runReport({ accessToken, propertyId, startDate, endDate, metrics: ['sessions', 'bouncedSessions', 'engagedSessions'] }),
+        runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['sessions', 'bouncedSessions', 'engagedSessions'] }),
       ]);
 
       // Sum cached daily rows to get totals (saves 2 GA4 API calls).
@@ -291,18 +297,17 @@ export default withAuth(async function handler(req, res) {
       }, { sessions: 0, users: 0, bouncedSessions: 0, engagedSessions: 0 });
       const cur = sumRows(cacheCurr);
       const pre = sumRows(cachePrev);
-      siteTotals.total_sessions = cur.sessions;
-      siteTotals.total_bounces  = cur.bouncedSessions;
-      siteTotals.engaged_sessions = cur.engagedSessions;
-      prevSiteTotals.total_sessions = pre.sessions;
-      prevSiteTotals.total_bounces  = pre.bouncedSessions;
-      prevSiteTotals.engaged_sessions = pre.engagedSessions;
-
-      // Prefer GA4's real engagedSessions metric over the sessions−bounces approximation.
-      const realEngagedCur = Math.round(rowsFromReport(engagedCurr)[0]?.engagedSessions || 0);
-      const realEngagedPre = Math.round(rowsFromReport(engagedPrev)[0]?.engagedSessions || 0);
-      if (realEngagedCur > 0) siteTotals.engaged_sessions = realEngagedCur;
-      if (realEngagedPre > 0) prevSiteTotals.engaged_sessions = realEngagedPre;
+      // Totals come from a LIVE GA4 report so the funnel KPIs (sessions, bounce, engaged)
+      // match the /analytics GA4 overview even when the daily cache is empty. Fall back to
+      // the summed cache if a live value is missing.
+      const liveCur = rowsFromReport(engagedCurr)[0] || {};
+      const livePre = rowsFromReport(engagedPrev)[0] || {};
+      siteTotals.total_sessions   = Math.round(liveCur.sessions || cur.sessions || 0);
+      siteTotals.total_bounces    = Math.round(liveCur.bouncedSessions || cur.bouncedSessions || 0);
+      siteTotals.engaged_sessions = Math.round(liveCur.engagedSessions || cur.engagedSessions || 0);
+      prevSiteTotals.total_sessions   = Math.round(livePre.sessions || pre.sessions || 0);
+      prevSiteTotals.total_bounces    = Math.round(livePre.bouncedSessions || pre.bouncedSessions || 0);
+      prevSiteTotals.engaged_sessions = Math.round(livePre.engagedSessions || pre.engagedSessions || 0);
 
       // Daily GA4 sessions/users — read from cache
       const ga4DailyRows = cacheCurr.map((r) => ({
