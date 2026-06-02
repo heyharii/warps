@@ -10,9 +10,8 @@ import {
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useDateRange } from '@/contexts/DateRangeContext';
 
-// d3-sankey is SVG-heavy and browser-only
-const FunnelSankey = dynamic(() => import('@/components/charts/FunnelSankey'), { ssr: false });
 // bklit registry charts — visx/motion based, browser-only
+const FunnelSankey = dynamic(() => import('@/components/charts/FunnelSankey'), { ssr: false });
 const BklitGauge = dynamic(() => import('@/components/charts/BklitGauge'), { ssr: false });
 const BklitRing  = dynamic(() => import('@/components/charts/BklitRing'),  { ssr: false });
 const BklitComposed = dynamic(() => import('@/components/charts/BklitComposed'), { ssr: false });
