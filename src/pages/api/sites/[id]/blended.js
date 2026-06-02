@@ -275,15 +275,15 @@ export default withAuth(async function handler(req, res) {
       // Live calls only for breakdowns we don't cache (per-source, per-path).
       const [sourcesCurr, leadCurr, reportCurr, checkoutCurr, leadPrev, reportPrev, checkoutPrev, engagedCurr, engagedPrev] = await Promise.all([
         runReport({ accessToken, propertyId, startDate, endDate,
-          dimensions: ['sessionSource', 'sessionMedium', 'sessionDefaultChannelGroup'], metrics: ['sessions', 'bouncedSessions'], limit: 500 }),
+          dimensions: ['sessionSource', 'sessionMedium', 'sessionDefaultChannelGroup'], metrics: ['sessions', 'bounceRate'], limit: 500 }),
         runReport({ accessToken, propertyId, startDate, endDate, metrics: ['screenPageViews'], dimensionFilter: pathFilter(FUNNEL_PATH_PATTERNS.leadForm) }),
         runReport({ accessToken, propertyId, startDate, endDate, metrics: ['screenPageViews'], dimensionFilter: pathFilter(FUNNEL_PATH_PATTERNS.reportPage) }),
         runReport({ accessToken, propertyId, startDate, endDate, metrics: ['screenPageViews'], dimensionFilter: pathFilter(FUNNEL_PATH_PATTERNS.checkout) }),
         runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['screenPageViews'], dimensionFilter: pathFilter(FUNNEL_PATH_PATTERNS.leadForm) }),
         runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['screenPageViews'], dimensionFilter: pathFilter(FUNNEL_PATH_PATTERNS.reportPage) }),
         runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['screenPageViews'], dimensionFilter: pathFilter(FUNNEL_PATH_PATTERNS.checkout) }),
-        runReport({ accessToken, propertyId, startDate, endDate, metrics: ['sessions', 'bouncedSessions', 'engagedSessions'] }),
-        runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['sessions', 'bouncedSessions', 'engagedSessions'] }),
+        runReport({ accessToken, propertyId, startDate, endDate, metrics: ['sessions', 'bounceRate', 'engagedSessions'] }),
+        runReport({ accessToken, propertyId, startDate: prevStartDate, endDate: prevEndDate, metrics: ['sessions', 'bounceRate', 'engagedSessions'] }),
       ]);
 
       // Sum cached daily rows to get totals (saves 2 GA4 API calls).
@@ -303,10 +303,10 @@ export default withAuth(async function handler(req, res) {
       const liveCur = rowsFromReport(engagedCurr)[0] || {};
       const livePre = rowsFromReport(engagedPrev)[0] || {};
       siteTotals.total_sessions   = Math.round(liveCur.sessions || cur.sessions || 0);
-      siteTotals.total_bounces    = Math.round(liveCur.bouncedSessions || cur.bouncedSessions || 0);
+      siteTotals.total_bounces    = liveCur.sessions != null ? Math.round((liveCur.bounceRate || 0) * liveCur.sessions) : (cur.bouncedSessions || 0);
       siteTotals.engaged_sessions = Math.round(liveCur.engagedSessions || cur.engagedSessions || 0);
       prevSiteTotals.total_sessions   = Math.round(livePre.sessions || pre.sessions || 0);
-      prevSiteTotals.total_bounces    = Math.round(livePre.bouncedSessions || pre.bouncedSessions || 0);
+      prevSiteTotals.total_bounces    = livePre.sessions != null ? Math.round((livePre.bounceRate || 0) * livePre.sessions) : (pre.bouncedSessions || 0);
       prevSiteTotals.engaged_sessions = Math.round(livePre.engagedSessions || pre.engagedSessions || 0);
 
       // Daily GA4 sessions/users — read from cache
@@ -334,7 +334,7 @@ export default withAuth(async function handler(req, res) {
           referrer:     (r.sessionSource || '').toLowerCase(),
           channelGroup: r.sessionDefaultChannelGroup || '',
           sessions: Math.round(r.sessions || 0),
-          bounces:  Math.round(r.bouncedSessions || 0),
+          bounces:  Math.round((r.bounceRate || 0) * (r.sessions || 0)),
         });
       }
 
