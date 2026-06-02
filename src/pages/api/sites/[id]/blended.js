@@ -521,7 +521,12 @@ export default withAuth(async function handler(req, res) {
     });
   }
 
-  const totalSessions = channels.reduce((a, c) => a + c.sessions, 0);
+  // Prefer the GA4 (or tracker) site total for the headline Sessions KPI + all
+  // session-based rates, so it matches the /analytics GA4 overview and is consistent
+  // with engaged/bounces (which already use siteTotals). Channel breakdown still uses
+  // each channel's own sessions.
+  const channelSessions = channels.reduce((a, c) => a + c.sessions, 0);
+  const totalSessions = siteTotals.total_sessions || channelSessions;
   const totalConversions = channels.reduce((a, c) => a + c.conversions, 0);
   const totalBounces = siteTotals.total_bounces || channels.reduce((a, c) => a + (c.bounces || 0), 0);
 
