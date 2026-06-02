@@ -7,7 +7,12 @@ import { getInstagramUserConn, getInstagramSiteLink, getInstagramDailyRows, getI
 import { getTiktokUserConn, getTiktokSiteLink, getTiktokDailyRows, getTiktokSummary } from '@/lib/tiktok';
 import { getGa4SiteLink, getGa4AccessTokenForSite, runReport, rowsFromReport } from '@/lib/ga4';
 import { readGa4DailyCache, syncGa4Site } from '@/lib/ga4-sync';
-import { getWebsiteSupabase, getFormSubmissionCount } from '@/lib/website-supabase';
+import { getWebsiteSupabase, getFormSubmissionCount, getPurchaseStats } from '@/lib/website-supabase';
+
+// Normalize a domain for comparison (strip protocol, www, trailing slash, lowercase).
+function normDomain(d) {
+  return (d || '').toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
+}
 
 function dateRange(period) {
   const now = new Date();
@@ -98,6 +103,11 @@ export default withAuth(async function handler(req, res) {
   const db = getDb();
   const site = db.prepare('SELECT * FROM sites WHERE id = ? AND user_id = ?').get(siteId, req.user.userId);
   if (!site) return res.status(404).json({ error: 'Site not found' });
+
+  // This site IS the marketing website when its domain matches WEBSITE_SUPABASE_SITE_DOMAIN
+  // (e.g. theravenry.com) and the website Supabase is configured. Drives real leads/purchases.
+  const websiteDomain = normDomain(process.env.WEBSITE_SUPABASE_SITE_DOMAIN);
+  const isWebsiteSite = !!(websiteDomain && getWebsiteSupabase() && normDomain(site.domain) === websiteDomain);
 
   const { startDate, endDate, prevStartDate, prevEndDate } = dateRange(period);
 
@@ -375,32 +385,40 @@ export default withAuth(async function handler(req, res) {
   const purchaseConv     = convWithAnyPath(FUNNEL_PATH_PATTERNS.checkout, null, startDate, dateEnd);
   const formSubmittedRaw = convWithAnyPath(FUNNEL_PATH_PATTERNS.leadForm, FUNNEL_PATH_PATTERNS.checkout, startDate, dateEnd);
   let formSubmittedReal = formSubmittedRaw.count;
-  const purchaseReal      = purchaseConv.count;
+  let purchaseReal        = purchaseConv.count;
+  let purchaseRevenueReal = purchaseConv.revenue;
   const prevPurchaseConv     = convWithAnyPath(FUNNEL_PATH_PATTERNS.checkout, null, prevStartDate, prevDateEnd);
   const prevFormSubmittedRaw = convWithAnyPath(FUNNEL_PATH_PATTERNS.leadForm, FUNNEL_PATH_PATTERNS.checkout, prevStartDate, prevDateEnd);
   let prevFormSubmitted = prevFormSubmittedRaw.count;
-  const prevPurchase      = prevPurchaseConv.count;
+  let prevPurchase      = prevPurchaseConv.count;
 
-  // If this site's leads live in the website's Supabase, use the REAL form-submission
-  // count for the funnel "Leads" stage instead of the page-view/conversion proxy.
-  // Gated by WEBSITE_SUPABASE_SITE_ID so other sites are unaffected.
-  if (getWebsiteSupabase() && String(siteId) === process.env.WEBSITE_SUPABASE_SITE_ID) {
+  // When this site IS the marketing website (domain match), use first-party data:
+  // Leads from Supabase form submissions, Purchases + revenue from Stripe (orders table).
+  let stripeRevenue = null;
+  let prevStripeRevenue = null;
+  if (isWebsiteSite) {
     try {
-      const [realLeads, prevRealLeads] = await Promise.all([
+      const [realLeads, prevRealLeads, purch, prevPurch] = await Promise.all([
         getFormSubmissionCount({ startDate, endDate }),
         getFormSubmissionCount({ startDate: prevStartDate, endDate: prevEndDate }),
+        getPurchaseStats({ startDate, endDate }),
+        getPurchaseStats({ startDate: prevStartDate, endDate: prevEndDate }),
       ]);
       if (realLeads > 0) {
         formSubmittedReal = realLeads;
-        // Ensure the lead branch renders (form views ≥ submissions) and stages read as real.
-        leadFormViewsReal = Math.max(leadFormViewsReal, realLeads);
+        leadFormViewsReal = Math.max(leadFormViewsReal, realLeads); // ensure the lead branch renders
       }
       if (prevRealLeads > 0) {
         prevFormSubmitted = prevRealLeads;
         prevLeadFormViews = Math.max(prevLeadFormViews, prevRealLeads);
       }
+      purchaseReal        = purch.count;
+      purchaseRevenueReal = purch.revenue;
+      stripeRevenue       = purch.revenue;
+      prevPurchase        = prevPurch.count;
+      prevStripeRevenue   = prevPurch.revenue;
     } catch (err) {
-      console.error('[Blended leads from Supabase]', err.message);
+      console.error('[Blended website Supabase]', err.message);
     }
   }
 
@@ -529,7 +547,7 @@ export default withAuth(async function handler(req, res) {
         bounces: totalBounces,
         engagedSessions: siteTotals.engaged_sessions ?? null,
         conversions: totalConversions,
-        revenue: convTotals.total_revenue || 0,
+        revenue: stripeRevenue != null ? stripeRevenue : (convTotals.total_revenue || 0),
       },
       // Real volumes from page_views (heuristic path match). UI can prefer these
       // over the dummy ratios when they are non-zero.
@@ -539,7 +557,7 @@ export default withAuth(async function handler(req, res) {
         checkoutView: checkoutViewsReal,
         formSubmitted: formSubmittedReal,
         purchase: purchaseReal,
-        purchaseRevenue: purchaseConv.revenue,
+        purchaseRevenue: purchaseRevenueReal,
         gscClicks: gscTotals.clicks || 0,
         gscImpressions: gscTotals.impressions || 0,
       },
@@ -547,7 +565,7 @@ export default withAuth(async function handler(req, res) {
         sessions: prevTotalSessions,
         bounces: prevSiteTotals.total_bounces || 0,
         conversions: prevTotalConversions,
-        revenue: prevConvTotals.total_revenue || 0,
+        revenue: prevStripeRevenue != null ? prevStripeRevenue : (prevConvTotals.total_revenue || 0),
         visitsToCTA: prevVisitsToCTA,
         leadFormView: prevLeadFormViews,
         reportPageView: prevReportPageViews,
@@ -559,7 +577,10 @@ export default withAuth(async function handler(req, res) {
       changes: {
         sessions:       pctChange(totalSessions, prevTotalSessions),
         conversions:    pctChange(totalConversions, prevTotalConversions),
-        revenue:        pctChange(convTotals.total_revenue || 0, prevConvTotals.total_revenue || 0),
+        revenue:        pctChange(
+          stripeRevenue != null ? stripeRevenue : (convTotals.total_revenue || 0),
+          prevStripeRevenue != null ? prevStripeRevenue : (prevConvTotals.total_revenue || 0),
+        ),
         ctaRate:        pctChange(
           // Prefer GA4 engagedSessions when available; else fall back to non-bounce ratio.
           totalSessions ? (siteTotals.engaged_sessions ?? (totalSessions - totalBounces)) / totalSessions : 0,

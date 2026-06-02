@@ -12,6 +12,20 @@ export function getWebsiteSupabase() {
   return _client;
 }
 
+// Real Stripe purchases (paid orders) + revenue (cents) in a date window — for the funnel "Purchases" stage.
+export async function getPurchaseStats({ startDate, endDate } = {}) {
+  const sb = getWebsiteSupabase();
+  if (!sb) return { count: 0, revenue: 0 };
+  let q = sb.from('orders').select('amount_total,created_at').eq('payment_status', 'paid');
+  if (startDate) q = q.gte('created_at', startDate);
+  if (endDate) q = q.lte('created_at', `${endDate}T23:59:59`);
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  const rows = data || [];
+  const revenue = rows.reduce((s, r) => s + (r.amount_total || 0), 0);
+  return { count: rows.length, revenue };
+}
+
 // Real count of website form submissions in a date window (for the blended funnel "Leads" stage).
 export async function getFormSubmissionCount({ startDate, endDate } = {}) {
   const sb = getWebsiteSupabase();
