@@ -24,6 +24,7 @@ export default function BklitFunnel({ stages = [], orientation = 'horizontal' })
       showValues
       showPercentage
       showLabels
+      labelLayout="grouped"
       formatValue={(v) => Number(v).toLocaleString()}
     />
   );

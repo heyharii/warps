@@ -4,7 +4,7 @@ import Head from 'next/head';
 import dynamic from 'next/dynamic';
 import {
   LuLayers, LuMail, LuLinkedin, LuTarget, LuCamera, LuMusic,
-  LuTrendingUp, LuTrendingDown, LuDollarSign, LuCircleCheck, LuCircleAlert,
+  LuTrendingUp, LuTrendingDown, LuCircleCheck, LuCircleAlert,
   LuMove, LuPalette, LuSquare, LuShuffle, LuSearch, LuMinus,
 } from 'react-icons/lu';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -133,7 +133,6 @@ export default function BlendedFunnelPage() {
   const { period } = useDateRange();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [goalMode, setGoalMode] = useState('both');
   const [activeChart, setActiveChart] = useState('traffic');
 
   const load = useCallback(async () => {
@@ -442,36 +441,12 @@ export default function BlendedFunnelPage() {
                   : 'No matching pages yet — mid-funnel uses standard ratios. Add /lead, /report, or /checkout paths to your site for real numbers.'}
               </div>
             </div>
-            <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 3, gap: 2 }}>
-              {[
-                { k: 'both',     label: 'Both Goals',    icon: <LuShuffle size={12} /> },
-                { k: 'lead',     label: 'Lead Gen',      icon: <LuTarget size={12} /> },
-                { k: 'purchase', label: 'Report Purchase', icon: <LuDollarSign size={12} /> },
-              ].map(b => (
-                <button
-                  key={b.k}
-                  onClick={() => setGoalMode(b.k)}
-                  style={{
-                    padding: '6px 12px', border: 'none', cursor: 'pointer',
-                    background: goalMode === b.k ? 'var(--bg-card)' : 'transparent',
-                    color: goalMode === b.k ? 'var(--text)' : 'var(--text-muted)',
-                    fontWeight: goalMode === b.k ? 600 : 500,
-                    fontSize: 12, borderRadius: 6,
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    fontFamily: 'inherit',
-                    boxShadow: goalMode === b.k ? 'var(--shadow-sm)' : 'none',
-                  }}
-                >
-                  {b.icon} {b.label}
-                </button>
-              ))}
-            </div>
           </div>
           <div className="panel-body" style={{ padding: 16 }}>
             <FunnelSankey
               channels={channels}
               totals={totals}
-              mode={goalMode}
+              mode="both"
               stages={{
                 leadFormView, formSubmitted, formAbandoned, crmQualified, crmLost,
                 reportView, checkout, reportBounce, purchase, checkoutAbandon,
