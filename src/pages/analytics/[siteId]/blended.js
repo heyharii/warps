@@ -17,6 +17,7 @@ const BklitGauge = dynamic(() => import('@/components/charts/BklitGauge'), { ssr
 const BklitRing  = dynamic(() => import('@/components/charts/BklitRing'),  { ssr: false });
 const BklitComposed = dynamic(() => import('@/components/charts/BklitComposed'), { ssr: false });
 const BklitRadar = dynamic(() => import('@/components/charts/BklitRadar'), { ssr: false });
+const BklitFunnel = dynamic(() => import('@/components/charts/BklitFunnel'), { ssr: false });
 
 const COLORS = {
   apollo:    { primary: '#6366f1', secondary: '#a5b4fc' },
@@ -122,65 +123,9 @@ function StageRow({ dot, name, goal, volume, fromPrev, dropoff, dropoffPct, conv
   );
 }
 
-// Bklit funnel-chart–inspired: SVG trapezoid funnel with halo rings + hover
+// Real bklit funnel-chart (dynamic-imported BklitFunnel).
 function VisualFunnelChart({ stages }) {
-  const [hovered, setHovered] = useState(null);
-  const filtered = (stages || []).filter(s => s.value != null && s.value > 0);
-  if (!filtered.length) return null;
-
-  const W = 560; const SEG_H = 58; const GAP = 6;
-  const totalH = filtered.length * (SEG_H + GAP) + 20;
-  const max = filtered[0].value;
-
-  return (
-    <div style={{ width: '100%', overflowX: 'auto' }}>
-      <svg width="100%" viewBox={`0 0 ${W} ${totalH}`} style={{ overflow: 'visible', minWidth: 300 }}>
-        <defs>
-          {filtered.map((s, i) => (
-            <linearGradient key={i} id={`vfg${i}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor={s.color} stopOpacity={0.88} />
-              <stop offset="100%" stopColor={s.color} stopOpacity={0.62} />
-            </linearGradient>
-          ))}
-        </defs>
-        {filtered.map((stage, i) => {
-          const pctTop = stage.value / max;
-          const next   = filtered[i + 1];
-          const pctBot = next ? Math.max(next.value / max, 0.08) : pctTop * 0.55;
-          const y = i * (SEG_H + GAP) + 10;
-          const topW = W * pctTop * 0.84; const botW = W * pctBot * 0.84;
-          const x1 = (W - topW) / 2; const x2 = x1 + topW;
-          const x4 = (W - botW) / 2; const x3 = x4 + botW;
-          const y2 = y + SEG_H;
-          const pts = `${x1},${y} ${x2},${y} ${x3},${y2} ${x4},${y2}`;
-          const isH = hovered === i;
-          const dropPct = next && stage.value > 0 ? ((1 - next.value / stage.value) * 100).toFixed(0) : null;
-          return (
-            <g key={i} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)} style={{ cursor: 'pointer' }}>
-              {[3, 2, 1].map(l => (
-                <polygon key={l}
-                  points={`${x1 - l * 7},${y - l * 4} ${x2 + l * 7},${y - l * 4} ${x3 + l * 7},${y2 + l * 4} ${x4 - l * 7},${y2 + l * 4}`}
-                  fill="none" stroke={stage.color}
-                  strokeOpacity={isH ? 0.22 / l : 0.05 / l}
-                  strokeWidth={l * 5}
-                  style={{ transition: 'stroke-opacity 0.25s' }}
-                />
-              ))}
-              <polygon points={pts} fill={`url(#vfg${i})`} stroke={stage.color} strokeWidth={1}
-                opacity={hovered !== null && !isH ? 0.5 : 1}
-                style={{ transition: 'opacity 0.2s' }}
-              />
-              <text x={x1 - 10} y={y + SEG_H / 2 + 4} textAnchor="end" fill="var(--text-muted)" fontSize={11} fontWeight={600}>{stage.label}</text>
-              <text x={W / 2}   y={y + SEG_H / 2 + 5} textAnchor="middle" fill="#fff" fontSize={13} fontWeight={700}>{Number(stage.value).toLocaleString()}</text>
-              {dropPct && (
-                <text x={x3 + 10} y={y + SEG_H / 2 + 4} textAnchor="start" fill="#ef4444" fontSize={10} fontWeight={700}>-{dropPct}%</text>
-              )}
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
+  return <BklitFunnel stages={stages} />;
 }
 
 export default function BlendedFunnelPage() {

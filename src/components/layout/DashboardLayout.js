@@ -59,6 +59,7 @@ export default function DashboardLayout({ children, siteId, siteName, siteDomain
                 <NavLink href={`/analytics/${siteId}`} active={path === `/analytics/${siteId}`}>Analytics</NavLink>
                 <NavLink href={`/analytics/${siteId}/blended`} active={path.includes('/blended')} accent>⚡ Blended</NavLink>
                 <NavLink href={`/analytics/${siteId}/conversions`} active={path.includes('/conversions')}>Conversions</NavLink>
+                <NavLink href={`/analytics/${siteId}/leads`} active={path.includes('/leads')}>Leads</NavLink>
 
                 <button
                   type="button"
