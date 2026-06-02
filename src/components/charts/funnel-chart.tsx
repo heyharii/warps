@@ -549,7 +549,7 @@ function SegmentLabel({
     </span>
   );
   const labelEl = showLabels && (
-    <span className="whitespace-nowrap font-medium text-muted-foreground text-xs">
+    <span className="whitespace-nowrap font-medium text-foreground text-xs">
       {stage.label}
     </span>
   );
