@@ -12,7 +12,7 @@ export default withAuth(function handler(req, res) {
     return res.status(400).json({ error: 'visitorId is required' });
   }
 
-  const site = verifySiteOwnership(siteId, req.user.userId);
+  const site = verifySiteOwnership(siteId);
   if (!site) return res.status(404).json({ error: 'Site not found' });
 
   const db = getDb();

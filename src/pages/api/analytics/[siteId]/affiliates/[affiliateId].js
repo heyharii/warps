@@ -8,7 +8,7 @@ export default withAuth(function handler(req, res) {
   }
 
   const { siteId, affiliateId } = req.query;
-  const site = verifySiteOwnership(siteId, req.user.userId);
+  const site = verifySiteOwnership(siteId);
   if (!site) return res.status(404).json({ error: 'Site not found' });
 
   const db = getDb();

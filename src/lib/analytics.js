@@ -22,11 +22,11 @@ export function parseDateRange(query) {
   };
 }
 
-export function verifySiteOwnership(siteId, userId) {
+export function verifySiteOwnership(siteId) {
   const db = getDb();
   return db
-    .prepare('SELECT * FROM sites WHERE id = ? AND user_id = ?')
-    .get(siteId, userId);
+    .prepare('SELECT * FROM sites WHERE id = ?')
+    .get(siteId);
 }
 
 export function getBreakdown(siteId, dateRange, table, groupField, limit = 20) {

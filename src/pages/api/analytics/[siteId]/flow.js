@@ -136,7 +136,7 @@ export default withAuth(function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const { siteId } = req.query;
-  const site = verifySiteOwnership(siteId, req.user.userId);
+  const site = verifySiteOwnership(siteId);
   if (!site) return res.status(404).json({ error: 'Site not found' });
 
   const db = getDb();
