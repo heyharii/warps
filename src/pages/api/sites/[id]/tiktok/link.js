@@ -5,7 +5,7 @@ import { getTiktokUserConn, linkTiktokSite, unlinkTiktokSite } from '@/lib/tikto
 export default withAuth(function handler(req, res) {
   const { id: siteId } = req.query;
   const db = getDb();
-  const site = db.prepare('SELECT id FROM sites WHERE id = ? AND user_id = ?').get(siteId, req.user.userId);
+  const site = db.prepare('SELECT id FROM sites WHERE id = ?').get(siteId);
   if (!site) return res.status(404).json({ error: 'Site not found' });
 
   if (req.method === 'POST') {

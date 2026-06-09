@@ -10,7 +10,7 @@ export default withAuth(function handler(req, res) {
   const userId = req.user.userId;
 
   // Get all user's sites
-  const sites = db.prepare('SELECT id, name, domain FROM sites WHERE user_id = ?').all(userId);
+  const sites = db.prepare('SELECT id, name, domain FROM sites').all();
   if (sites.length === 0) {
     return res.json({ visitors: [], countries: [], recentPayments: [], activeUsers: 0, totals: {} });
   }

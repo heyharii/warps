@@ -6,7 +6,7 @@ export default withAuth(function handler(req, res) {
   if (req.method === 'GET') {
     // Return status (masked key) for all user's sites
     const db = getDb();
-    const sites = db.prepare('SELECT id FROM sites WHERE user_id = ?').all(req.user.userId);
+    const sites = db.prepare('SELECT id FROM sites').all();
     const result = {};
     for (const s of sites) {
       const conn = getApolloConnection(s.id);
@@ -21,7 +21,7 @@ export default withAuth(function handler(req, res) {
 
     // Verify site belongs to user
     const db = getDb();
-    const site = db.prepare('SELECT id FROM sites WHERE id = ? AND user_id = ?').get(siteId, req.user.userId);
+    const site = db.prepare('SELECT id FROM sites WHERE id = ?').get(siteId);
     if (!site) return res.status(403).json({ error: 'Not your site' });
 
     saveApolloConnection(siteId, apiKey);

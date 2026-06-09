@@ -10,8 +10,8 @@ export default withAuth(function handler(req, res) {
   const db = getDb();
 
   const site = db
-    .prepare('SELECT * FROM sites WHERE id = ? AND user_id = ?')
-    .get(id, req.user.userId);
+    .prepare('SELECT * FROM sites WHERE id = ?')
+    .get(id);
 
   if (!site) return res.status(404).json({ error: 'Site not found' });
 

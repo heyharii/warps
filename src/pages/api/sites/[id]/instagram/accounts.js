@@ -6,7 +6,7 @@ export default withAuth(async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   const { id: siteId } = req.query;
   const db = getDb();
-  const site = db.prepare('SELECT id FROM sites WHERE id = ? AND user_id = ?').get(siteId, req.user.userId);
+  const site = db.prepare('SELECT id FROM sites WHERE id = ?').get(siteId);
   if (!site) return res.status(404).json({ error: 'Site not found' });
 
   const conn = getInstagramUserConn(req.user.userId);

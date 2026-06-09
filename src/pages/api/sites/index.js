@@ -10,9 +10,9 @@ export default withAuth(function handler(req, res) {
         `SELECT s.id, s.user_id, s.domain, s.name, s.created_at,
           (SELECT COUNT(*) FROM page_views pv WHERE pv.site_id = s.id
            AND pv.timestamp >= datetime('now', '-7 days')) as views_7d
-         FROM sites s WHERE s.user_id = ? ORDER BY s.created_at DESC`
+         FROM sites s ORDER BY s.created_at DESC`
       )
-      .all(req.user.userId);
+      .all();
 
     // Fetch hourly pageviews + visitors for last 24h per site
     const siteIds = sites.map((s) => s.id);

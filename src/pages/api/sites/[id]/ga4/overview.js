@@ -30,7 +30,7 @@ export default withAuth(async function handler(req, res) {
   const { id } = req.query;
   const siteId = parseInt(id, 10);
   const db = getDb();
-  const site = db.prepare('SELECT id, domain, name FROM sites WHERE id = ? AND user_id = ?').get(siteId, req.user.userId);
+  const site = db.prepare('SELECT id, domain, name FROM sites WHERE id = ?').get(siteId);
   if (!site) return res.status(404).json({ error: 'Site not found' });
 
   const link = getGa4SiteLink(siteId);

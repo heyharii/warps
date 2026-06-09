@@ -6,7 +6,7 @@ import { setGa4SiteLink, getGa4SiteLink } from '@/lib/ga4';
 export default withAuth(async function handler(req, res) {
   const { id } = req.query;
   const db = getDb();
-  const site = db.prepare('SELECT id FROM sites WHERE id = ? AND user_id = ?').get(id, req.user.userId);
+  const site = db.prepare('SELECT id FROM sites WHERE id = ?').get(id);
   if (!site) return res.status(404).json({ error: 'Site not found' });
 
   if (req.method === 'GET') {

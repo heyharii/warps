@@ -96,7 +96,7 @@ export default withAuth(async function handler(req, res) {
   const { id: siteId, period = '30d' } = req.query;
 
   const db = getDb();
-  const site = db.prepare('SELECT * FROM sites WHERE id = ? AND user_id = ?').get(siteId, req.user.userId);
+  const site = db.prepare('SELECT * FROM sites WHERE id = ?').get(siteId);
   if (!site) return res.status(404).json({ error: 'Site not found' });
 
   // This site IS the marketing website when its domain matches WEBSITE_SUPABASE_SITE_DOMAIN

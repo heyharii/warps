@@ -10,7 +10,7 @@ export default withAuth(function handler(req, res) {
   const days = PERIOD_DAYS[period] || 30;
 
   const db = getDb();
-  const site = db.prepare('SELECT id, name, domain FROM sites WHERE id = ? AND user_id = ?').get(id, req.user.userId);
+  const site = db.prepare('SELECT id, name, domain FROM sites WHERE id = ?').get(id);
   if (!site) return res.status(404).json({ error: 'Site not found' });
 
   const userConn = getUserConnection(req.user.userId);

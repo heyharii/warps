@@ -10,7 +10,7 @@ export default withAuth(async function handler(req, res) {
   if (!property) return res.status(400).json({ error: 'property required' });
 
   const db = getDb();
-  const site = db.prepare('SELECT id FROM sites WHERE id = ? AND user_id = ?').get(id, req.user.userId);
+  const site = db.prepare('SELECT id FROM sites WHERE id = ?').get(id);
   if (!site) return res.status(404).json({ error: 'Site not found' });
 
   if (!getUserConnection(req.user.userId)) {
