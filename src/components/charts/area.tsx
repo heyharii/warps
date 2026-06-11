@@ -127,6 +127,15 @@ export function Area({
     [dataKey, yScale]
   );
 
+  // Points with no numeric value are gaps, not zeros. Without this the missing
+  // points collapse to y=0 (the top of the SVG, since the y range is
+  // [innerHeight, 0]) and the series spikes to the chart's max. `defined`
+  // breaks the path there instead — e.g. a GA4 series stops where its data ends.
+  const isDefined = useCallback(
+    (d: Record<string, unknown>) => Number.isFinite(d[dataKey] as number),
+    [dataKey]
+  );
+
   const hasDashTail = resolveDashTailBounds(dashFromIndex, data.length);
   // The stroke gradient is only emitted when at least one edge fades, so fall
   // back to the resolved solid color otherwise — avoids an invalid url(#...).
@@ -166,6 +175,7 @@ export function Area({
             <AreaClosed
               curve={curve}
               data={renderData}
+              defined={isDefined}
               fill={areaFill}
               x={(d) => xScale(xAccessor(d)) ?? 0}
               y={getY}
@@ -180,6 +190,7 @@ export function Area({
             <LinePath
               curve={curve}
               data={renderData}
+              defined={isDefined}
               innerRef={pathRef}
               stroke={hasDashTail ? "transparent" : strokePaint}
               strokeLinecap="round"

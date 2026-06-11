@@ -105,6 +105,15 @@ export function Line({
     [dataKey, yScale]
   );
 
+  // Points with no numeric value are gaps, not zeros. Without this the missing
+  // points collapse to y=0 (the top of the SVG, since the y range is
+  // [innerHeight, 0]) and the series spikes to the chart's max. `defined`
+  // breaks the path there instead — e.g. a GA4 series stops where its data ends.
+  const isDefined = useCallback(
+    (d: Record<string, unknown>) => Number.isFinite(d[dataKey] as number),
+    [dataKey]
+  );
+
   const hasDashTail = resolveDashTailBounds(dashFromIndex, data.length);
   const fadeSides = resolveFadeSides(fadeEdges);
   const lineStroke = fadeSides.any ? `url(#${gradientId})` : stroke;
@@ -130,6 +139,7 @@ export function Line({
         <LinePath
           curve={curve}
           data={renderData}
+          defined={isDefined}
           innerRef={pathRef}
           stroke={hasDashTail ? "transparent" : lineStroke}
           strokeLinecap="round"
